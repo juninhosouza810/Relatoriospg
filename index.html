@@ -420,13 +420,25 @@
                         <label>Km Percorrido:</label>
                         <input type="number" id="kmPercorrido" readonly>
                     </div>
+                </div>
+
+                <h4 style="margin-top: 15px; color: #555;">Dados da Tripulação</h4>
+                <div class="form-grid">
                     <div class="form-group">
                         <label>Motorista RE:</label>
-                        <input type="text" id="motRe" onchange="updatePreview()">
+                        <input type="text" id="motRe" placeholder="RE do Motorista" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Motorista Nome de Guerra:</label>
+                        <input type="text" id="motNomeGuerra" placeholder="Nome de Guerra do Motorista" onchange="updatePreview()">
                     </div>
                     <div class="form-group">
                         <label>Auxiliar RE:</label>
-                        <input type="text" id="auxRe" onchange="updatePreview()">
+                        <input type="text" id="auxRe" placeholder="RE do Auxiliar" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Auxiliar Nome de Guerra:</label>
+                        <input type="text" id="auxNomeGuerra" placeholder="Nome de Guerra do Auxiliar" onchange="updatePreview()">
                     </div>
                 </div>
             </div>
@@ -840,7 +852,7 @@
             <div class="official-header">
                 <div class="logo-area">
                     <!-- SUBSTITUA O LINK ABAIXO PELO SEU LINK RAW DO GITHUB -->
-                    <img src="https://github.com/user-attachments/assets/e1ada904-7099-4b30-8478-aec11ea38a55" 
+                    <img src="https://github.com/seuusuario/seurepositorio/raw/main/brasao-sp.png" 
                          alt="Brasão do Estado de São Paulo" 
                          onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\'font-size:9px; text-align:center;\'>BRASÃO<br>PMESP</div>';">
                 </div>
@@ -882,11 +894,11 @@
                 </tr>
                 <tr>
                     <td>Km Início: <span id="printKmInicio"></span></td>
-                    <td colspan="3">Mot: <span id="printMot"></span></td>
+                    <td colspan="3">Mot: <span id="printMot"></span> - <span id="printMotNomeGuerra"></span></td>
                 </tr>
                 <tr>
                     <td>Km Percorrido: <span id="printKmPercorrido"></span></td>
-                    <td colspan="3">Aux: <span id="printAux"></span></td>
+                    <td colspan="3">Aux: <span id="printAux"></span> - <span id="printAuxNomeGuerra"></span></td>
                 </tr>
             </table>
 
@@ -1200,10 +1212,10 @@
     </div>
 
     <script>
-        // Gerenciamento de Estado
+        // Gerenciamento de Estado - ATUALIZADO COM NOVOS CAMPOS
         const formFields = [
             'dataRonda', 'turnoInicio', 'turnoFim', 'viatura', 'postoGrad', 'reDc', 'nomeGuerra',
-            'kmInicio', 'kmFinal', 'motRe', 'auxRe',
+            'kmInicio', 'kmFinal', 'motRe', 'motNomeGuerra', 'auxRe', 'auxNomeGuerra',
             'opm1Unidade', 'opm1Municipio', 'opm1Chegada', 'opm1Saida', 'opm1Policiais', 'opm1Epi',
             'opm1AreaExterna', 'opm1ServicoDia', 'opm1ReservaArmas', 'opm1Vestiarios', 'opm1Copa',
             'opm1Garagens', 'opm1Lazer', 'opm1Outros',
@@ -1237,7 +1249,7 @@
             updatePreview();
         }
 
-        // Atualizar visualização do relatório
+        // Atualizar visualização do relatório - ATUALIZADO
         function updatePreview() {
             // Campos de texto
             formFields.forEach(field => {
@@ -1269,10 +1281,16 @@
             // Atualizar campos calculados
             document.getElementById('printKmPercorrido').textContent = document.getElementById('kmPercorrido').value;
             
-            // Formatação especial para campos de assinatura
+            // Formatação especial para campos de tripulação
             document.getElementById('printEnc').textContent = document.getElementById('nomeGuerra').value;
             document.getElementById('printMot').textContent = document.getElementById('motRe').value;
             document.getElementById('printAux').textContent = document.getElementById('auxRe').value;
+            
+            // Novos campos de nome de guerra
+            const printMotNome = document.getElementById('printMotNomeGuerra');
+            const printAuxNome = document.getElementById('printAuxNomeGuerra');
+            if (printMotNome) printMotNome.textContent = document.getElementById('motNomeGuerra').value || '';
+            if (printAuxNome) printAuxNome.textContent = document.getElementById('auxNomeGuerra').value || '';
         }
 
         // Gerar Relatório (mostrar preview)
@@ -1439,5 +1457,4 @@
         });
     </script>
 </body>
-
 </html>
