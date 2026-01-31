@@ -1,0 +1,1442 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Relatório de Ronda - CPI-10</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        /* Interface de Edição */
+        .edit-mode {
+            padding: 30px;
+            background: #f8f9fa;
+        }
+
+        .header-edit {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #003366;
+            color: white;
+            border-radius: 8px;
+        }
+
+        .form-section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #003366;
+        }
+
+        .form-section h3 {
+            color: #003366;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            text-transform: uppercase;
+            border-bottom: 2px solid #003366;
+            padding-bottom: 5px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.95em;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #003366;
+        }
+
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            text-transform: uppercase;
+            transition: all 0.3s;
+            font-size: 0.9em;
+        }
+
+        .btn-primary {
+            background: #003366;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #004080;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,51,102,0.3);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        /* Modo Impressão - Layout Oficial */
+        .print-mode {
+            display: none;
+            padding: 20px;
+            background: white;
+            font-family: "Times New Roman", Times, serif;
+            font-size: 11pt;
+            line-height: 1.2;
+        }
+
+        .official-header {
+            display: grid;
+            grid-template-columns: 100px 1fr 2fr;
+            gap: 0;
+            border: 2px solid black;
+            margin-bottom: 0;
+        }
+
+        .official-header .logo-area {
+            border-right: 2px solid black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px;
+            background: white;
+        }
+
+        /* ESTILO PARA O BRASÃO - IMAGEM DO GITHUB */
+        .official-header .logo-area img {
+            width: 85px;
+            height: auto;
+            max-height: 90px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .official-header .pm-text {
+            border-right: 2px solid black;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-weight: bold;
+            font-size: 11pt;
+            padding: 10px;
+            line-height: 1.3;
+        }
+
+        .official-header .doc-title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-weight: bold;
+            font-size: 12pt;
+            text-decoration: underline;
+            padding: 10px;
+        }
+
+        .date-line {
+            border: 2px solid black;
+            border-top: none;
+            padding: 8px;
+            text-align: right;
+            margin-bottom: 15px;
+            font-size: 11pt;
+        }
+
+        table.official-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+            font-size: 10pt;
+        }
+
+        table.official-table th,
+        table.official-table td {
+            border: 1px solid black;
+            padding: 6px;
+            vertical-align: top;
+        }
+
+        table.official-table th {
+            background: #f0f0f0;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .section-title {
+            background: #e0e0e0;
+            font-weight: bold;
+            text-align: center;
+            font-size: 11pt;
+        }
+
+        .item-number {
+            font-weight: bold;
+            display: inline;
+        }
+
+        .item-text {
+            font-size: 9.5pt;
+        }
+
+        .signature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+            border: 2px solid black;
+            padding: 10px;
+        }
+
+        .signature-box {
+            text-align: center;
+            font-size: 9pt;
+        }
+
+        .signature-line {
+            border-top: 1px solid black;
+            margin-top: 40px;
+            padding-top: 5px;
+        }
+
+        .observations-box {
+            border: 2px solid black;
+            min-height: 300px;
+            margin-top: 15px;
+        }
+
+        .observations-title {
+            background: #f0f0f0;
+            border-bottom: 1px solid black;
+            padding: 5px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .observations-content {
+            padding: 10px;
+            min-height: 250px;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            
+            .container {
+                box-shadow: none;
+                max-width: 100%;
+            }
+            
+            .edit-mode {
+                display: none !important;
+            }
+            
+            .print-mode {
+                display: block !important;
+                padding: 10mm;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+            
+            .official-header .logo-area img {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            @page {
+                size: A4;
+                margin: 10mm;
+            }
+        }
+
+        .saved-reports {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 6px;
+        }
+
+        .report-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            background: white;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            border-left: 3px solid #003366;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- MODO EDIÇÃO -->
+        <div class="edit-mode" id="editMode">
+            <div class="header-edit">
+                <h1>🚔 Sistema de Relatório de Ronda</h1>
+                <h2>Oficial Superior/Supervisor do CPI-10</h2>
+                <p>Polícia Militar do Estado de São Paulo</p>
+            </div>
+
+            <!-- Dados Básicos -->
+            <div class="form-section">
+                <h3>📋 Dados da Ronda</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Data:</label>
+                        <input type="date" id="dataRonda" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Turno de:</label>
+                        <input type="time" id="turnoInicio" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Às:</label>
+                        <input type="time" id="turnoFim" onchange="updatePreview()">
+                    </div>
+                </div>
+                
+                <h4 style="margin-top: 15px; color: #555;">Dados da Viatura</h4>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Viatura (Prefixo):</label>
+                        <input type="text" id="viatura" placeholder="Ex: CPI-10123" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Posto/Graduação:</label>
+                        <input type="text" id="postoGrad" placeholder="Ex: Capitão" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>RE/DC:</label>
+                        <input type="text" id="reDc" placeholder="Número RE" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Nome de Guerra:</label>
+                        <input type="text" id="nomeGuerra" placeholder="Nome de Guerra" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Km Início:</label>
+                        <input type="number" id="kmInicio" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Km Final:</label>
+                        <input type="number" id="kmFinal" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Km Percorrido:</label>
+                        <input type="number" id="kmPercorrido" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Motorista RE:</label>
+                        <input type="text" id="motRe" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Auxiliar RE:</label>
+                        <input type="text" id="auxRe" onchange="updatePreview()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- OPM 1 -->
+            <div class="form-section">
+                <h3>🏢 OPM Rondada - 1</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Btl/Cia PM/Pel/Gp:</label>
+                        <input type="text" id="opm1Unidade" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Município:</label>
+                        <input type="text" id="opm1Municipio" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Hora Chegada:</label>
+                        <input type="time" id="opm1Chegada" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Hora Saída:</label>
+                        <input type="time" id="opm1Saida" onchange="updatePreview()">
+                    </div>
+                </div>
+                
+                <div class="form-group" style="margin-top: 10px;">
+                    <label>1. Policiais de Serviço (Posto/Grad/RE/Nome):</label>
+                    <textarea id="opm1Policiais" rows="2" onchange="updatePreview()"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>1.1. Apresentação pessoal e EPI:</label>
+                    <textarea id="opm1Epi" rows="2" onchange="updatePreview()"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>2. Área externa da OPM:</label>
+                    <textarea id="opm1AreaExterna" rows="2" onchange="updatePreview()"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>3. Serviço de Dia e áreas comuns internas:</label>
+                    <textarea id="opm1ServicoDia" rows="2" onchange="updatePreview()"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>4. Reserva de armas:</label>
+                    <textarea id="opm1ReservaArmas" rows="2" onchange="updatePreview()"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>5. Vestiários:</label>
+                    <textarea id="opm1Vestiarios" rows="2" onchange="updatePreview()"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>6. Copa/cozinha:</label>
+                    <textarea id="opm1Copa" rows="2" onchange="updatePreview()"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>7. Garagens:</label>
+                    <textarea id="opm1Garagens" rows="2" onchange="updatePreview()"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>8. Área de lazer:</label>
+                    <textarea id="opm1Lazer" rows="2" onchange="updatePreview()"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>9. Outros itens/Observações:</label>
+                    <textarea id="opm1Outros" rows="2" onchange="updatePreview()"></textarea>
+                </div>
+            </div>
+
+            <!-- OPM 2 -->
+            <div class="form-section">
+                <h3>🏢 OPM Rondada - 2</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Btl/Cia PM/Pel/Gp:</label>
+                        <input type="text" id="opm2Unidade" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Município:</label>
+                        <input type="text" id="opm2Municipio" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Hora Chegada:</label>
+                        <input type="time" id="opm2Chegada" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Hora Saída:</label>
+                        <input type="time" id="opm2Saida" onchange="updatePreview()">
+                    </div>
+                </div>
+                
+                <div class="form-group" style="margin-top: 10px;">
+                    <label>1. Policiais de Serviço:</label>
+                    <textarea id="opm2Policiais" rows="2" onchange="updatePreview()"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>1.1. Apresentação pessoal e EPI:</label>
+                    <textarea id="opm2Epi" rows="2" onchange="updatePreview()"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>2. Área externa:</label>
+                    <textarea id="opm2AreaExterna" rows="2" onchange="updatePreview()"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>3. Serviço de Dia:</label>
+                    <textarea id="opm2ServicoDia" rows="2" onchange="updatePreview()"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>4. Reserva de armas:</label>
+                    <textarea id="opm2ReservaArmas" rows="2" onchange="updatePreview()"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>5. Vestiários:</label>
+                    <textarea id="opm2Vestiarios" rows="2" onchange="updatePreview()"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>6. Copa/cozinha:</label>
+                    <textarea id="opm2Copa" rows="2" onchange="updatePreview()"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>7. Garagens:</label>
+                    <textarea id="opm2Garagens" rows="2" onchange="updatePreview()"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>8. Área de lazer:</label>
+                    <textarea id="opm2Lazer" rows="2" onchange="updatePreview()"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>9. Outros/Observações:</label>
+                    <textarea id="opm2Outros" rows="2" onchange="updatePreview()"></textarea>
+                </div>
+            </div>
+
+            <!-- Ronda Programada 1 -->
+            <div class="form-section">
+                <h3>🚔 Ronda a Programa de Policiamento - 1</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Horário:</label>
+                        <input type="time" id="rp1Horario" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Viatura:</label>
+                        <input type="text" id="rp1Viatura" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Km:</label>
+                        <input type="text" id="rp1Km" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Local:</label>
+                        <input type="text" id="rp1Local" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Enc RE:</label>
+                        <input type="text" id="rp1EncRe" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Enc QRA:</label>
+                        <input type="text" id="rp1EncQra" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Nº Arma Portátil:</label>
+                        <input type="text" id="rp1EncArma" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Mot RE:</label>
+                        <input type="text" id="rp1MotRe" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Mot QRA:</label>
+                        <input type="text" id="rp1MotQra" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Mot Nº Arma:</label>
+                        <input type="text" id="rp1MotArma" onchange="updatePreview()">
+                    </div>
+                </div>
+                
+                <div class="checkbox-grid" style="margin-top: 15px;">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="rp1CppVtr" onchange="updatePreview()">
+                        <label for="rp1CppVtr">1. CPP está na vtr?</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="rp1CppAtualizado" onchange="updatePreview()">
+                        <label for="rp1CppAtualizado">1.1. Está atualizado?</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="rp1VtrLocal" onchange="updatePreview()">
+                        <label for="rp1VtrLocal">2. Vtr está no local conforme CPP?</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="rp1Tablet" onchange="updatePreview()">
+                        <label for="rp1Tablet">3. Tablet (TMD) logado?</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="rp1Conformidade" onchange="updatePreview()">
+                        <label for="rp1Conformidade">4. CPP, RSO e TMD em conformidade?</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="rp1Giroflex" onchange="updatePreview()">
+                        <label for="rp1Giroflex">5. O giroflex estava acionado?</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="rp1Produtividade" onchange="updatePreview()">
+                        <label for="rp1Produtividade">6. RSO com produtividade anotada?</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="rp1Treinamento" onchange="updatePreview()">
+                        <label for="rp1Treinamento">7. Houve treinamento no prazo de 15 dias?</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="rp1BoEletronico" onchange="updatePreview()">
+                        <label for="rp1BoEletronico">8. Sabe elaborar BO PM Eletrônico?</label>
+                    </div>
+                </div>
+                
+                <div class="form-group" style="margin-top: 10px;">
+                    <label>Observações complementares:</label>
+                    <textarea id="rp1Obs" rows="2" onchange="updatePreview()"></textarea>
+                </div>
+            </div>
+
+            <!-- Ronda Programada 2 -->
+            <div class="form-section">
+                <h3>🚔 Ronda a Programa de Policiamento - 2</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Horário:</label>
+                        <input type="time" id="rp2Horario" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Viatura:</label>
+                        <input type="text" id="rp2Viatura" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Km:</label>
+                        <input type="text" id="rp2Km" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Local:</label>
+                        <input type="text" id="rp2Local" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Enc RE:</label>
+                        <input type="text" id="rp2EncRe" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Enc QRA:</label>
+                        <input type="text" id="rp2EncQra" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Nº Arma Portátil:</label>
+                        <input type="text" id="rp2EncArma" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Mot RE:</label>
+                        <input type="text" id="rp2MotRe" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Mot QRA:</label>
+                        <input type="text" id="rp2MotQra" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Mot Nº Arma:</label>
+                        <input type="text" id="rp2MotArma" onchange="updatePreview()">
+                    </div>
+                </div>
+                
+                <div class="checkbox-grid" style="margin-top: 15px;">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="rp2CppVtr" onchange="updatePreview()">
+                        <label for="rp2CppVtr">1. CPP está na vtr?</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="rp2CppAtualizado" onchange="updatePreview()">
+                        <label for="rp2CppAtualizado">1.1. Está atualizado?</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="rp2VtrLocal" onchange="updatePreview()">
+                        <label for="rp2VtrLocal">2. Vtr está no local conforme CPP?</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="rp2Tablet" onchange="updatePreview()">
+                        <label for="rp2Tablet">3. Tablet (TMD) logado?</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="rp2Conformidade" onchange="updatePreview()">
+                        <label for="rp2Conformidade">4. CPP, RSO e TMD em conformidade?</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="rp2Giroflex" onchange="updatePreview()">
+                        <label for="rp2Giroflex">5. O giroflex estava acionado?</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="rp2Produtividade" onchange="updatePreview()">
+                        <label for="rp2Produtividade">6. RSO com produtividade anotada?</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="rp2Treinamento" onchange="updatePreview()">
+                        <label for="rp2Treinamento">7. Houve treinamento no prazo de 15 dias?</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="rp2BoEletronico" onchange="updatePreview()">
+                        <label for="rp2BoEletronico">8. Sabe elaborar BO PM Eletrônico?</label>
+                    </div>
+                </div>
+                
+                <div class="form-group" style="margin-top: 10px;">
+                    <label>Observações complementares:</label>
+                    <textarea id="rp2Obs" rows="2" onchange="updatePreview()"></textarea>
+                </div>
+            </div>
+
+            <!-- Documentos Elaborados -->
+            <div class="form-section">
+                <h3>📄 Documentos Elaborados</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Tipo/Número:</label>
+                        <input type="text" id="docTipo" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Assunto:</label>
+                        <input type="text" id="docAssunto" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Destino:</label>
+                        <input type="text" id="docDestino" onchange="updatePreview()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Observações Gerais -->
+            <div class="form-section">
+                <h3>📝 Observações Gerais</h3>
+                <div class="form-group">
+                    <textarea id="obsGerais" rows="6" style="width: 100%;" onchange="updatePreview()"></textarea>
+                </div>
+            </div>
+
+            <!-- Assinaturas -->
+            <div class="form-section">
+                <h3>✍️ Dados das Assinaturas</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Oficial Superior/Supervisor:</label>
+                        <input type="text" id="assOficial" placeholder="Nome completo" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Data (Oficial):</label>
+                        <input type="text" id="assDataOficial" placeholder="__/__/____" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Ch Div Op:</label>
+                        <input type="text" id="assChDivOp" placeholder="Nome" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Data (Ch Div Op):</label>
+                        <input type="text" id="assDataChDivOp" placeholder="__/__/____" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Ch EM CPI-10:</label>
+                        <input type="text" id="assChEm" placeholder="Nome" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Data (Ch EM):</label>
+                        <input type="text" id="assDataChEm" placeholder="__/__/____" onchange="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Destino Final:</label>
+                        <input type="text" id="assDestino" placeholder="Ex: Arquivo/Seção" onchange="updatePreview()">
+                    </div>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn-primary" onclick="gerarRelatorio()">👁️ Visualizar Relatório Oficial</button>
+                <button class="btn-success" onclick="salvarRascunho()">💾 Salvar Rascunho</button>
+                <button class="btn-warning" onclick="limparFormulario()">🗑️ Limpar Tudo</button>
+                <button class="btn-danger" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+            </div>
+
+            <div class="saved-reports" id="savedReports" style="display: none;">
+                <h4>📂 Rascunhos Salvos</h4>
+                <div id="reportsList"></div>
+            </div>
+        </div>
+
+        <!-- MODO IMPRESSÃO - LAYOUT OFICIAL -->
+        <div class="print-mode" id="printMode">
+            <!-- Cabeçalho Oficial com Brasão do GitHub -->
+            <div class="official-header">
+                <div class="logo-area">
+                    <!-- SUBSTITUA O LINK ABAIXO PELO SEU LINK RAW DO GITHUB -->
+                    <img src="https://github.com/seuusuario/seurepositorio/raw/main/brasao-sp.png" 
+                         alt="Brasão do Estado de São Paulo" 
+                         onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\'font-size:9px; text-align:center;\'>BRASÃO<br>PMESP</div>';">
+                </div>
+                <div class="pm-text">
+                    <div>POLÍCIA MILITAR</div>
+                    <div>DO</div>
+                    <div>ESTADO DE SÃO PAULO</div>
+                </div>
+                <div class="doc-title">
+                    RELATÓRIO DE RONDA DO OFICIAL<br>
+                    SUPERIOR/SUPERVISOR DO<br>
+                    CPI-10
+                </div>
+            </div>
+
+            <!-- Linha de Data -->
+            <div class="date-line">
+                Data: <span id="printData">____/____/________</span> - 
+                Turno das <span id="printTurnoInicio">____:____</span> às <span id="printTurnoFim">____:____</span> horas
+            </div>
+
+            <!-- Tabela de Viatura -->
+            <table class="official-table">
+                <tr>
+                    <th>Viatura</th>
+                    <th>Posto / Graduação</th>
+                    <th>RE DC</th>
+                    <th>Nome de Guerra</th>
+                </tr>
+                <tr>
+                    <td id="printViatura" style="height: 25px;"></td>
+                    <td id="printPostoGrad"></td>
+                    <td id="printReDc"></td>
+                    <td id="printNomeGuerra"></td>
+                </tr>
+                <tr>
+                    <td>Km Final: <span id="printKmFinal"></span></td>
+                    <td colspan="3">Enc: <span id="printEnc"></span></td>
+                </tr>
+                <tr>
+                    <td>Km Início: <span id="printKmInicio"></span></td>
+                    <td colspan="3">Mot: <span id="printMot"></span></td>
+                </tr>
+                <tr>
+                    <td>Km Percorrido: <span id="printKmPercorrido"></span></td>
+                    <td colspan="3">Aux: <span id="printAux"></span></td>
+                </tr>
+            </table>
+
+            <!-- OPM 1 -->
+            <table class="official-table">
+                <tr>
+                    <th colspan="4" class="section-title">OPM RONDADA - 1</th>
+                </tr>
+                <tr>
+                    <td style="width: 30%;"><strong>Btl/ Cia PM / Pel / Gp:</strong> <span id="printOp1Unidade"></span></td>
+                    <td style="width: 30%;"><strong>Município:</strong> <span id="printOp1Municipio"></span></td>
+                    <td style="width: 20%;"><strong>Hora de chegada:</strong> <span id="printOp1Chegada"></span></td>
+                    <td style="width: 20%;"><strong>Hora de saída:</strong> <span id="printOp1Saida"></span></td>
+                </tr>
+                <tr>
+                    <td colspan="4">
+                        <span class="item-number">1.</span> <span class="item-text"><strong>Policiais de Serviço</strong> na base (Posto/Graduação / RE / Nome de guerra):<br>
+                        <span id="printOp1Policiais"></span></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4">
+                        <span class="item-number">1.1.</span> <span class="item-text"><strong>Apresentação pessoal</strong> e <strong>EPI</strong> (mencionar eventuais alterações e, nesse caso, se foi elaborado doc a respeito; lançar o número do colete balístico e do armamento em uso pelo policial do Sv Dia):<br>
+                        <span id="printOp1Epi"></span></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4">
+                        <span class="item-number">2.</span> <span class="item-text"><strong>Área externa</strong> da OPM (observar itens como: pintura de fachada, estado de conservação do tóten, pintura de paredes, portas e portões; iluminação externa; poda de árvores e áreas verdes; funcionamento de torneiras em garagens e lavadores de vtrs; estado dos mastros das bandeiras; etc.):<br>
+                        <span id="printOp1AreaExterna"></span></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4">
+                        <span class="item-number">3.</span> <span class="item-text"><strong>Serviço de Dia</strong> e <strong>áreas comuns internas</strong> (observar itens como: limpeza das áreas comuns internas -- pisos, paredes, portas e vidros de vitrôs e janelas; pintura de paredes e portas internas; iluminação interna; se há materiais abandonados nos corredores ou quintais; etc.):<br>
+                        <span id="printOp1ServicoDia"></span></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4">
+                        <span class="item-number">4.</span> <span class="item-text"><strong>Reserva de armas</strong> (observar se a reserva de armas está instalada em local seguro e se possui barreiras físicas que impeçam/dificultem o acesso de pessoas ao seu interior; se o armamento/munição está acondicionado em cofre e se este permanece devidamente trancado; se existe livro para controle de entrada e saída de armamento/munição e se é conferido periodicamente pelo Cmt Cia/Gp, etc.):<br>
+                        <span id="printOp1ReservaArmas"></span></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4">
+                        <span class="item-number">5.</span> <span class="item-text"><strong>Vestiários</strong> (observar a conservação, a organização e a limpeza de pisos, paredes, espelhos, sanitários, pias, portas e vidros; iluminação; se os armários estão identificados, se há materiais abandonados nos vestiários, se as torneiras funcionam e se não estão com vazamento, etc.):<br>
+                        <span id="printOp1Vestiarios"></span></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4">
+                        <span class="item-number">6.</span> <span class="item-text"><strong>Copa/cozinha</strong> (observar a conservação, a organização e a limpeza de pisos, paredes, pias, portas e vidros de vitrôs e janelas, eletrodomésticos -- geladeira, fogão, forno de microondas; iluminação; se as torneiras funcionam e se não estão com vazamento, etc.):<br>
+                        <span id="printOp1Copa"></span></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4">
+                        <span class="item-number">7.</span> <span class="item-text"><strong>Garagens</strong> (observar itens como: limpeza da área da garagem e das viaturas estacionadas; iluminação; materiais abandonados; etc.):<br>
+                        <span id="printOp1Garagens"></span></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4">
+                        <span class="item-number">8.</span> <span class="item-text"><strong>Área de lazer</strong> (citar o tipo de área de lazer -- churrasqueira, piscina, quadra, etc.; observar itens como: pintura, estado de conservação dos itens elétricos e hidráulicos; materiais abandonados; etc.):<br>
+                        <span id="printOp1Lazer"></span></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4">
+                        <span class="item-number">9.</span> <span class="item-text">Outros itens julgados oportunos e pertinentes a serem relatados podem ser lançados no campo "Observações".<br>
+                        <span id="printOp1Outros"></span></span>
+                    </td>
+                </tr>
+            </table>
+
+            <!-- OPM 2 -->
+            <table class="official-table">
+                <tr>
+                    <th colspan="4" class="section-title">OPM RONDADA - 2</th>
+                </tr>
+                <tr>
+                    <td style="width: 30%;"><strong>Btl/ Cia PM / Pel / Gp:</strong> <span id="printOp2Unidade"></span></td>
+                    <td style="width: 30%;"><strong>Município:</strong> <span id="printOp2Municipio"></span></td>
+                    <td style="width: 20%;"><strong>Hora de chegada:</strong> <span id="printOp2Chegada"></span></td>
+                    <td style="width: 20%;"><strong>Hora de saída:</strong> <span id="printOp2Saida"></span></td>
+                </tr>
+                <tr>
+                    <td colspan="4">
+                        <span class="item-number">1.</span> <span class="item-text"><strong>Policiais de Serviço</strong> na base (Posto/Graduação / RE / Nome de guerra):<br>
+                        <span id="printOp2Policiais"></span></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4">
+                        <span class="item-number">1.1.</span> <span class="item-text"><strong>Apresentação pessoal</strong> e <strong>EPI</strong> (mencionar eventuais alterações e, nesse caso, se foi elaborado doc a respeito; lançar o número do colete balístico e do armamento em uso pelo policial do Sv Dia):<br>
+                        <span id="printOp2Epi"></span></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4">
+                        <span class="item-number">2.</span> <span class="item-text"><strong>Área externa</strong> da OPM (observar itens como: pintura de fachada, estado de conservação do tóten, pintura de paredes e portas e portões; iluminação externa; poda de árvores e áreas verdes; funcionamento de torneiras em garagens e lavadores de vtrs; estado dos mastros das bandeiras; etc.):<br>
+                        <span id="printOp2AreaExterna"></span></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4">
+                        <span class="item-number">3.</span> <span class="item-text"><strong>Serviço de Dia</strong> e <strong>áreas comuns internas</strong> (observar itens como: limpeza das áreas comuns internas -- pisos, paredes, portas e vidros de vitrôs e janelas; pintura de paredes e portas internas; iluminação interna; se há materiais abandonados nos corredores ou quintais; etc.):<br>
+                        <span id="printOp2ServicoDia"></span></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4">
+                        <span class="item-number">4.</span> <span class="item-text"><strong>Reserva de armas</strong> (observar se a reserva de armas está instalada em local seguro e se possui barreiras físicas que impeçam/dificultem o acesso de pessoas ao seu interior; se o armamento/munição está acondicionado em cofre e se este permanece devidamente trancado; se existe livro para controle de entrada e saída de armamento/munição e se é conferido periodicamente pelo Cmt Cia/Gp, etc.):<br>
+                        <span id="printOp2ReservaArmas"></span></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4">
+                        <span class="item-number">5.</span> <span class="item-text"><strong>Vestiários</strong> (observar a conservação, a organização e a limpeza de pisos, paredes, sanitários, pias, portas e vidros; iluminação; se os armários estão identificados, se há materiais abandonados nos vestiários, se as torneiras funcionam e se não estão com vazamento, etc.):<br>
+                        <span id="printOp2Vestiarios"></span></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4">
+                        <span class="item-number">6.</span> <span class="item-text"><strong>Copa/cozinha</strong> (observar a conservação, a organização e a limpeza de pisos, paredes, pias, portas e vidros de vitrôs e janelas, eletrodomésticos -- geladeira, fogão, forno de microondas; iluminação; se as torneiras funcionam e se não estão com vazamento, etc.):<br>
+                        <span id="printOp2Copa"></span></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4">
+                        <span class="item-number">7.</span> <span class="item-text"><strong>Garagens</strong> (observar itens como: limpeza da área da garagem e das viaturas estacionadas; iluminação; materiais abandonados; etc.):<br>
+                        <span id="printOp2Garagens"></span></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4">
+                        <span class="item-number">8.</span> <span class="item-text"><strong>Área de lazer</strong> (citar o tipo de área de lazer -- churrasqueira, piscina, quadra, etc.; observar itens como: pintura, estado de conservação dos itens elétricos e hidráulicos; materiais abandonados; etc.):<br>
+                        <span id="printOp2Lazer"></span></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4">
+                        <span class="item-number">9.</span> <span class="item-text"><strong>Outros</strong> itens julgados oportunos e pertinentes a serem relatados podem ser lançados no campo "Observações".<br>
+                        <span id="printOp2Outros"></span></span>
+                    </td>
+                </tr>
+            </table>
+
+            <!-- Ronda Programada 1 -->
+            <table class="official-table" style="font-size: 9pt;">
+                <tr>
+                    <th colspan="8" class="section-title">RONDA A PROGRAMA DE POLICIAMENTO - 1</th>
+                </tr>
+                <tr>
+                    <th>Horário</th>
+                    <th>Viatura</th>
+                    <th>Km</th>
+                    <th>Local</th>
+                    <th colspan="2">Enc RE / QRA / Nº arma portátil</th>
+                    <th colspan="2">Mot RE / QRA / Nº arma portátil</th>
+                </tr>
+                <tr style="text-align: center;">
+                    <td id="printRp1Horario" style="height: 20px;"></td>
+                    <td id="printRp1Viatura"></td>
+                    <td id="printRp1Km"></td>
+                    <td id="printRp1Local"></td>
+                    <td colspan="2">
+                        <span id="printRp1EncRe"></span> / 
+                        <span id="printRp1EncQra"></span> / 
+                        <span id="printRp1EncArma"></span>
+                    </td>
+                    <td colspan="2">
+                        <span id="printRp1MotRe"></span> / 
+                        <span id="printRp1MotQra"></span> / 
+                        <span id="printRp1MotArma"></span>
+                    </td>
+                </tr>
+                <tr style="font-size: 8.5pt;">
+                    <td colspan="4" style="width: 50%;">
+                        1. CPP está na vtr? <span id="printRp1CppVtr"></span><br>
+                        1.1. Está atualizado? <span id="printRp1CppAtualizado"></span><br>
+                        2. Vtr está no local conforme CPP? <span id="printRp1VtrLocal"></span><br>
+                        3. Tablet (TMD) logado? <span id="printRp1Tablet"></span><br>
+                        4. CPP, RSO e TMD estão em conformidade? <span id="printRp1Conformidade"></span>
+                    </td>
+                    <td colspan="4" style="width: 50%;">
+                        5. O giroflex estava acionado? <span id="printRp1Giroflex"></span><br>
+                        6. RSO com produtividade anotada? <span id="printRp1Produtividade"></span><br>
+                        7. Houve treinamento no prazo de 15 dias? (POP, ICC,EAP, outros)? <span id="printRp1Treinamento"></span><br>
+                        8. Sabe elaborar BO PM Eletrônico? <span id="printRp1BoEletronico"></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="8">
+                        <strong>Observações complementares:</strong><br>
+                        <span id="printRp1Obs" style="min-height: 30px; display: block;"></span>
+                    </td>
+                </tr>
+            </table>
+
+            <!-- Ronda Programada 2 -->
+            <table class="official-table" style="font-size: 9pt;">
+                <tr>
+                    <th colspan="8" class="section-title">RONDA A PROGRAMA DE POLICIAMENTO - 2</th>
+                </tr>
+                <tr>
+                    <th>Horário</th>
+                    <th>Viatura</th>
+                    <th>Km</th>
+                    <th>Local</th>
+                    <th colspan="2">Enc RE / QRA / Nº arma portátil</th>
+                    <th colspan="2">Mot RE / QRA / Nº arma portátil</th>
+                </tr>
+                <tr style="text-align: center;">
+                    <td id="printRp2Horario" style="height: 20px;"></td>
+                    <td id="printRp2Viatura"></td>
+                    <td id="printRp2Km"></td>
+                    <td id="printRp2Local"></td>
+                    <td colspan="2">
+                        <span id="printRp2EncRe"></span> / 
+                        <span id="printRp2EncQra"></span> / 
+                        <span id="printRp2EncArma"></span>
+                    </td>
+                    <td colspan="2">
+                        <span id="printRp2MotRe"></span> / 
+                        <span id="printRp2MotQra"></span> / 
+                        <span id="printRp2MotArma"></span>
+                    </td>
+                </tr>
+                <tr style="font-size: 8.5pt;">
+                    <td colspan="4" style="width: 50%;">
+                        1. CPP está na vtr? <span id="printRp2CppVtr"></span><br>
+                        1.1. Está atualizado? <span id="printRp2CppAtualizado"></span><br>
+                        2. Vtr está no local conforme CPP? <span id="printRp2VtrLocal"></span><br>
+                        3. Tablet (TMD) logado? <span id="printRp2Tablet"></span><br>
+                        4. CPP, RSO e TMD estão em conformidade? <span id="printRp2Conformidade"></span>
+                    </td>
+                    <td colspan="4" style="width: 50%;">
+                        5. O giroflex estava acionado? <span id="printRp2Giroflex"></span><br>
+                        6. RSO com produtividade anotada? <span id="printRp2Produtividade"></span><br>
+                        7. Houve treinamento no prazo de 15 dias? (POP, ICC,EAP, outros)? <span id="printRp2Treinamento"></span><br>
+                        8. Sabe elaborar BO PM Eletrônico? <span id="printRp2BoEletronico"></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="8">
+                        <strong>Observações complementares:</strong><br>
+                        <span id="printRp2Obs" style="min-height: 30px; display: block;"></span>
+                    </td>
+                </tr>
+            </table>
+
+            <!-- Documentos Elaborados -->
+            <table class="official-table">
+                <tr>
+                    <th colspan="3" class="section-title">DOCUMENTOS ELABORADOS</th>
+                </tr>
+                <tr>
+                    <th style="width: 20%;">Tipo de Doc / Número</th>
+                    <th style="width: 40%;">Assunto</th>
+                    <th style="width: 40%;">Destino</th>
+                </tr>
+                <tr>
+                    <td id="printDocTipo" style="height: 25px;"></td>
+                    <td id="printDocAssunto"></td>
+                    <td id="printDocDestino"></td>
+                </tr>
+            </table>
+
+            <!-- Observações -->
+            <div class="observations-box">
+                <div class="observations-title">OBSERVAÇÕES</div>
+                <div class="observations-content" id="printObsGerais"></div>
+            </div>
+
+            <!-- Assinaturas -->
+            <div class="signature-grid" style="margin-top: 20px; font-size: 9pt;">
+                <div class="signature-box">
+                    <div style="text-align: left; margin-bottom: 40px;">
+                        Do Oficial Superior/Supervisor do CPI-10.<br>
+                        Ao Sr Ch Div Op<br><br>
+                        Encaminho o presente para conhecimento.
+                    </div>
+                    <div class="signature-line" id="printAssOficial"></div>
+                    <div>Carimbo e assinatura</div>
+                    <div style="margin-top: 10px;">Em <span id="printAssDataOficial">____/____/________</span></div>
+                </div>
+                
+                <div class="signature-box">
+                    <div style="text-align: left; margin-bottom: 40px;">
+                        Do Ch Div OP<br>
+                        Ao Sr Ch EM CPI-10
+                    </div>
+                    <div class="signature-line" id="printAssChDivOp"></div>
+                    <div>Carimbo e assinatura</div>
+                    <div style="margin-top: 10px;">Em <span id="printAssDataChDivOp">____/____/________</span></div>
+                </div>
+                
+                <div class="signature-box">
+                    <div style="text-align: left; margin-bottom: 40px;">
+                        Do Ch EM CPI-10<br>
+                        Ao <span id="printAssDestino">___________</span>.
+                    </div>
+                    <div class="signature-line" id="printAssChEm"></div>
+                    <div>Carimbo e assinatura</div>
+                    <div style="margin-top: 10px;">Em <span id="printAssDataChEm">____/____/________</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Gerenciamento de Estado
+        const formFields = [
+            'dataRonda', 'turnoInicio', 'turnoFim', 'viatura', 'postoGrad', 'reDc', 'nomeGuerra',
+            'kmInicio', 'kmFinal', 'motRe', 'auxRe',
+            'opm1Unidade', 'opm1Municipio', 'opm1Chegada', 'opm1Saida', 'opm1Policiais', 'opm1Epi',
+            'opm1AreaExterna', 'opm1ServicoDia', 'opm1ReservaArmas', 'opm1Vestiarios', 'opm1Copa',
+            'opm1Garagens', 'opm1Lazer', 'opm1Outros',
+            'opm2Unidade', 'opm2Municipio', 'opm2Chegada', 'opm2Saida', 'opm2Policiais', 'opm2Epi',
+            'opm2AreaExterna', 'opm2ServicoDia', 'opm2ReservaArmas', 'opm2Vestiarios', 'opm2Copa',
+            'opm2Garagens', 'opm2Lazer', 'opm2Outros',
+            'rp1Horario', 'rp1Viatura', 'rp1Km', 'rp1Local', 'rp1EncRe', 'rp1EncQra', 'rp1EncArma',
+            'rp1MotRe', 'rp1MotQra', 'rp1MotArma', 'rp1Obs',
+            'rp2Horario', 'rp2Viatura', 'rp2Km', 'rp2Local', 'rp2EncRe', 'rp2EncQra', 'rp2EncArma',
+            'rp2MotRe', 'rp2MotQra', 'rp2MotArma', 'rp2Obs',
+            'docTipo', 'docAssunto', 'docDestino', 'obsGerais',
+            'assOficial', 'assDataOficial', 'assChDivOp', 'assDataChDivOp', 'assChEm', 'assDataChEm', 'assDestino'
+        ];
+
+        const checkboxFields = [
+            'rp1CppVtr', 'rp1CppAtualizado', 'rp1VtrLocal', 'rp1Tablet', 'rp1Conformidade',
+            'rp1Giroflex', 'rp1Produtividade', 'rp1Treinamento', 'rp1BoEletronico',
+            'rp2CppVtr', 'rp2CppAtualizado', 'rp2VtrLocal', 'rp2Tablet', 'rp2Conformidade',
+            'rp2Giroflex', 'rp2Produtividade', 'rp2Treinamento', 'rp2BoEletronico'
+        ];
+
+        // Calcular KM percorrido automaticamente
+        document.getElementById('kmInicio').addEventListener('input', calcularKm);
+        document.getElementById('kmFinal').addEventListener('input', calcularKm);
+
+        function calcularKm() {
+            const inicio = parseFloat(document.getElementById('kmInicio').value) || 0;
+            const fim = parseFloat(document.getElementById('kmFinal').value) || 0;
+            const percorrido = fim - inicio;
+            document.getElementById('kmPercorrido').value = percorrido >= 0 ? percorrido : 0;
+            updatePreview();
+        }
+
+        // Atualizar visualização do relatório
+        function updatePreview() {
+            // Campos de texto
+            formFields.forEach(field => {
+                const element = document.getElementById(field);
+                const printElement = document.getElementById('print' + field.charAt(0).toUpperCase() + field.slice(1));
+                if (element && printElement) {
+                    printElement.textContent = element.value || '';
+                }
+            });
+
+            // Campos de data formatados
+            const dataRonda = document.getElementById('dataRonda').value;
+            if (dataRonda) {
+                const [ano, mes, dia] = dataRonda.split('-');
+                document.getElementById('printData').textContent = `${dia}/${mes}/${ano}`;
+            }
+
+            // Checkboxes
+            checkboxFields.forEach(field => {
+                const checkbox = document.getElementById(field);
+                const printElement = document.getElementById('print' + field.charAt(0).toUpperCase() + field.slice(1));
+                if (checkbox && printElement) {
+                    printElement.innerHTML = checkbox.checked ? 
+                        '<span style="color: black; font-weight: bold;">( X ) Sim&nbsp;&nbsp;( &nbsp;&nbsp; ) Não</span>' : 
+                        '<span style="color: black;">( &nbsp;&nbsp; ) Sim&nbsp;&nbsp;( &nbsp;&nbsp; ) Não</span>';
+                }
+            });
+
+            // Atualizar campos calculados
+            document.getElementById('printKmPercorrido').textContent = document.getElementById('kmPercorrido').value;
+            
+            // Formatação especial para campos de assinatura
+            document.getElementById('printEnc').textContent = document.getElementById('nomeGuerra').value;
+            document.getElementById('printMot').textContent = document.getElementById('motRe').value;
+            document.getElementById('printAux').textContent = document.getElementById('auxRe').value;
+        }
+
+        // Gerar Relatório (mostrar preview)
+        function gerarRelatorio() {
+            updatePreview();
+            document.getElementById('editMode').style.display = 'none';
+            document.getElementById('printMode').style.display = 'block';
+            window.scrollTo(0, 0);
+            
+            // Adicionar botão para voltar
+            const btnVoltar = document.createElement('button');
+            btnVoltar.innerHTML = '✏️ Voltar à Edição';
+            btnVoltar.className = 'btn-warning no-print';
+            btnVoltar.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.3);';
+            btnVoltar.onclick = function() {
+                document.getElementById('editMode').style.display = 'block';
+                document.getElementById('printMode').style.display = 'none';
+                this.remove();
+            };
+            document.body.appendChild(btnVoltar);
+        }
+
+        // Salvar rascunho no localStorage
+        function salvarRascunho() {
+            const data = {};
+            formFields.forEach(field => {
+                data[field] = document.getElementById(field).value;
+            });
+            checkboxFields.forEach(field => {
+                data[field] = document.getElementById(field).checked;
+            });
+
+            const timestamp = new Date().toLocaleString('pt-BR');
+            const savedReports = JSON.parse(localStorage.getItem('rondasCPI10') || '[]');
+            savedReports.push({
+                id: Date.now(),
+                data: timestamp,
+                content: data
+            });
+
+            localStorage.setItem('rondasCPI10', JSON.stringify(savedReports));
+            alert('Rascunho salvo com sucesso!\nData: ' + timestamp);
+            listarRascunhos();
+        }
+
+        // Listar rascunhos salvos
+        function listarRascunhos() {
+            const savedReports = JSON.parse(localStorage.getItem('rondasCPI10') || '[]');
+            const container = document.getElementById('savedReports');
+            const list = document.getElementById('reportsList');
+
+            if (savedReports.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+
+            container.style.display = 'block';
+            list.innerHTML = savedReports.map(report => `
+                <div class="report-item">
+                    <span>Rascunho #${report.id} - ${report.data}</span>
+                    <div>
+                        <button onclick="carregarRascunho(${report.id})" style="padding: 5px 10px; margin-right: 5px; background: #003366; color: white; border: none; border-radius: 3px; cursor: pointer;">Carregar</button>
+                        <button onclick="excluirRascunho(${report.id})" style="padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer;">Excluir</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Carregar rascunho
+        function carregarRascunho(id) {
+            const savedReports = JSON.parse(localStorage.getItem('rondasCPI10') || '[]');
+            const report = savedReports.find(r => r.id === id);
+            
+            if (report && report.content) {
+                formFields.forEach(field => {
+                    const element = document.getElementById(field);
+                    if (element && report.content[field] !== undefined) {
+                        element.value = report.content[field];
+                    }
+                });
+                
+                checkboxFields.forEach(field => {
+                    const element = document.getElementById(field);
+                    if (element && report.content[field] !== undefined) {
+                        element.checked = report.content[field];
+                    }
+                });
+                
+                calcularKm();
+                updatePreview();
+                alert('Rascunho carregado com sucesso!');
+            }
+        }
+
+        // Excluir rascunho
+        function excluirRascunho(id) {
+            if (confirm('Deseja realmente excluir este rascunho?')) {
+                let savedReports = JSON.parse(localStorage.getItem('rondasCPI10') || '[]');
+                savedReports = savedReports.filter(r => r.id !== id);
+                localStorage.setItem('rondasCPI10', JSON.stringify(savedReports));
+                listarRascunhos();
+            }
+        }
+
+        // Limpar formulário
+        function limparFormulario() {
+            if (confirm('Deseja limpar todos os campos?')) {
+                formFields.forEach(field => {
+                    const element = document.getElementById(field);
+                    if (element) element.value = '';
+                });
+                
+                checkboxFields.forEach(field => {
+                    const element = document.getElementById(field);
+                    if (element) element.checked = false;
+                });
+                
+                updatePreview();
+            }
+        }
+
+        // Carregar dados ao iniciar
+        window.onload = function() {
+            listarRascunhos();
+            
+            // Definir data atual como padrão
+            const hoje = new Date().toISOString().split('T')[0];
+            document.getElementById('dataRonda').value = hoje;
+            updatePreview();
+        };
+
+        // Salvar automaticamente a cada 30 segundos
+        setInterval(() => {
+            const data = {};
+            formFields.forEach(field => {
+                data[field] = document.getElementById(field).value;
+            });
+            checkboxFields.forEach(field => {
+                data[field] = document.getElementById(field).checked;
+            });
+            localStorage.setItem('rascunhoAuto', JSON.stringify(data));
+        }, 30000);
+
+        // Restaurar autosave ao carregar
+        window.addEventListener('load', () => {
+            const autoSave = localStorage.getItem('rascunhoAuto');
+            if (autoSave) {
+                const data = JSON.parse(autoSave);
+                formFields.forEach(field => {
+                    const element = document.getElementById(field);
+                    if (element && data[field] && !element.value) {
+                        element.value = data[field];
+                    }
+                });
+                checkboxFields.forEach(field => {
+                    const element = document.getElementById(field);
+                    if (element && data[field] !== undefined) {
+                        element.checked = data[field];
+                    }
+                });
+                calcularKm();
+                updatePreview();
+            }
+        });
+    </script>
+</body>
+</html>
