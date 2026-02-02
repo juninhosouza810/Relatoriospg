@@ -3,7 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Relatório de Ronda - CPI-10</title>
+    <title>Sistema de Relatório de Ronda - CPI-10 | Firebase Edition</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -27,10 +33,121 @@
             overflow: hidden;
         }
 
+        /* Tela de Login */
+        .login-screen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        }
+
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .login-box h1 {
+            color: #003366;
+            margin-bottom: 10px;
+            font-size: 1.5em;
+        }
+
+        .login-box h2 {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+            font-weight: normal;
+        }
+
+        .login-box .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .login-box input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 1em;
+        }
+
+        .login-box input:focus {
+            outline: none;
+            border-color: #003366;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: #003366;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-login:hover {
+            background: #004080;
+        }
+
+        .btn-register {
+            width: 100%;
+            padding: 14px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .error-msg {
+            color: #dc3545;
+            font-size: 0.9em;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .user-info {
+            background: #003366;
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .user-info span {
+            font-weight: 600;
+        }
+
+        .btn-logout {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
         /* Interface de Edição */
         .edit-mode {
             padding: 30px;
             background: #f8f9fa;
+            display: none;
         }
 
         .header-edit {
@@ -191,7 +308,6 @@
             background: white;
         }
 
-        /* ESTILO PARA O BRASÃO - IMAGEM DO GITHUB */
         .official-header .logo-area img {
             width: 85px;
             height: auto;
@@ -319,7 +435,7 @@
                 max-width: 100%;
             }
             
-            .edit-mode {
+            .edit-mode, .login-screen, .user-info {
                 display: none !important;
             }
             
@@ -354,16 +470,134 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px;
+            padding: 10px;
             background: white;
             margin-bottom: 8px;
             border-radius: 4px;
             border-left: 3px solid #003366;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .report-item:hover {
+            background: #f8f9fa;
+        }
+
+        .report-info {
+            flex: 1;
+        }
+
+        .report-title {
+            font-weight: 600;
+            color: #003366;
+        }
+
+        .report-date {
+            font-size: 0.85em;
+            color: #666;
+        }
+
+        .report-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.8em;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #003366;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .sync-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: #28a745;
+            color: white;
+            border-radius: 6px;
+            font-size: 0.9em;
+            display: none;
+            z-index: 1000;
+        }
+
+        .sync-status.show {
+            display: block;
+            animation: fadeInOut 3s ease;
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; }
+            10%, 90% { opacity: 1; }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .empty-state i {
+            font-size: 3em;
+            margin-bottom: 10px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
+    <!-- TELA DE LOGIN -->
+    <div class="login-screen" id="loginScreen">
+        <div class="login-box">
+            <h1>🚔 CPI-10</h1>
+            <h2>Sistema de Relatórios de Ronda</h2>
+            
+            <div class="form-group">
+                <label>Email:</label>
+                <input type="email" id="loginEmail" placeholder="seu.email@pm.sp.gov.br">
+            </div>
+            
+            <div class="form-group">
+                <label>Senha:</label>
+                <input type="password" id="loginPassword" placeholder="••••••••">
+            </div>
+            
+            <button class="btn-login" onclick="login()">Entrar</button>
+            <button class="btn-register" onclick="register()">Criar Nova Conta</button>
+            
+            <div class="error-msg" id="loginError"></div>
+            
+            <div style="margin-top: 20px; font-size: 0.85em; color: #666;">
+                <p><strong>Dica:</strong> Use seu email institucional</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ÁREA LOGADA -->
+    <div class="container" id="appContainer" style="display: none;">
+        <!-- Header com info do usuário -->
+        <div class="user-info">
+            <div>
+                <span id="userName">Usuário</span> | 
+                <small id="userEmail">email@pm.sp.gov.br</small>
+            </div>
+            <button class="btn-logout" onclick="logout()">Sair</button>
+        </div>
+
         <!-- MODO EDIÇÃO -->
         <div class="edit-mode" id="editMode">
             <div class="header-edit">
@@ -835,14 +1069,19 @@
 
             <div class="btn-group">
                 <button class="btn-primary" onclick="gerarRelatorio()">👁️ Visualizar Relatório Oficial</button>
-                <button class="btn-success" onclick="salvarRascunho()">💾 Salvar Rascunho</button>
+                <button class="btn-success" onclick="salvarRascunhoFirebase()">💾 Salvar no Firebase</button>
                 <button class="btn-warning" onclick="limparFormulario()">🗑️ Limpar Tudo</button>
                 <button class="btn-danger" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
             </div>
 
-            <div class="saved-reports" id="savedReports" style="display: none;">
-                <h4>📂 Rascunhos Salvos</h4>
-                <div id="reportsList"></div>
+            <!-- Lista de Relatórios do Usuário -->
+            <div class="saved-reports" id="savedReports">
+                <h4>📂 Meus Relatórios Salvos <span id="loadingIndicator" class="loading" style="display: none;"></span></h4>
+                <div id="reportsList">
+                    <div class="empty-state">
+                        <p>Carregando relatórios...</p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -851,7 +1090,6 @@
             <!-- Cabeçalho Oficial com Brasão do GitHub -->
             <div class="official-header">
                 <div class="logo-area">
-                    <!-- SUBSTITUA O LINK ABAIXO PELO SEU LINK RAW DO GITHUB -->
                     <img src="https://github.com/seuusuario/seurepositorio/raw/main/brasao-sp.png" 
                          alt="Brasão do Estado de São Paulo" 
                          onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\'font-size:9px; text-align:center;\'>BRASÃO<br>PMESP</div>';">
@@ -1211,8 +1449,376 @@
         </div>
     </div>
 
+    <!-- Notificação de sincronização -->
+    <div class="sync-status" id="syncStatus">✓ Sincronizado com Firebase</div>
+
     <script>
-        // Gerenciamento de Estado - ATUALIZADO COM NOVOS CAMPOS
+        // ==========================================
+        // CONFIGURAÇÃO DO FIREBASE - SUBSTITUA COM SUAS CREDENCIAIS
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "SUA_API_KEY",
+            authDomain: "SEU_PROJETO.firebaseapp.com",
+            projectId: "SEU_PROJETO",
+            storageBucket: "SEU_PROJETO.appspot.com",
+            messagingSenderId: "SEU_SENDER_ID",
+            appId: "SEU_APP_ID"
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Variável global para usuário atual
+        let currentUser = null;
+        let currentReportId = null;
+
+        // ==========================================
+        // AUTENTICAÇÃO
+        // ==========================================
+        
+        // Verificar estado de autenticação
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                currentUser = user;
+                showApp();
+                loadUserReports();
+            } else {
+                showLogin();
+            }
+        });
+
+        function showLogin() {
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('appContainer').style.display = 'none';
+        }
+
+        function showApp() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'block';
+            document.getElementById('editMode').style.display = 'block';
+            
+            // Atualizar info do usuário
+            document.getElementById('userName').textContent = currentUser.displayName || 'Usuário';
+            document.getElementById('userEmail').textContent = currentUser.email;
+            
+            // Definir data atual
+            const hoje = new Date().toISOString().split('T')[0];
+            document.getElementById('dataRonda').value = hoje;
+        }
+
+        // Login
+        function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const errorDiv = document.getElementById('loginError');
+            
+            if (!email || !password) {
+                errorDiv.textContent = 'Preencha email e senha';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            auth.signInWithEmailAndPassword(email, password)
+                .catch((error) => {
+                    errorDiv.textContent = getErrorMessage(error.code);
+                    errorDiv.style.display = 'block';
+                });
+        }
+
+        // Registro
+        function register() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const errorDiv = document.getElementById('loginError');
+            
+            if (!email || !password) {
+                errorDiv.textContent = 'Preencha email e senha';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            if (password.length < 6) {
+                errorDiv.textContent = 'Senha deve ter no mínimo 6 caracteres';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // Criar perfil do usuário no Firestore
+                    return db.collection('users').doc(userCredential.user.uid).set({
+                        email: email,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        displayName: email.split('@')[0]
+                    });
+                })
+                .catch((error) => {
+                    errorDiv.textContent = getErrorMessage(error.code);
+                    errorDiv.style.display = 'block';
+                });
+        }
+
+        // Logout
+        function logout() {
+            auth.signOut();
+        }
+
+        // Tradução de erros
+        function getErrorMessage(code) {
+            const errors = {
+                'auth/invalid-email': 'Email inválido',
+                'auth/user-disabled': 'Usuário desativado',
+                'auth/user-not-found': 'Usuário não encontrado',
+                'auth/wrong-password': 'Senha incorreta',
+                'auth/email-already-in-use': 'Email já cadastrado',
+                'auth/weak-password': 'Senha muito fraca',
+                'auth/invalid-credential': 'Email ou senha incorretos'
+            };
+            return errors[code] || 'Erro ao autenticar';
+        }
+
+        // ==========================================
+        // BANCO DE DADOS - FIRESTORE
+        // ==========================================
+
+        // Salvar relatório no Firebase
+        async function salvarRascunhoFirebase() {
+            if (!currentUser) {
+                alert('Você precisa estar logado');
+                return;
+            }
+
+            const formData = collectFormData();
+            
+            // Validar campos obrigatórios mínimos
+            if (!formData.dataRonda) {
+                alert('Preencha pelo menos a data da ronda');
+                return;
+            }
+
+            const reportData = {
+                userId: currentUser.uid,
+                userEmail: currentUser.email,
+                ...formData,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            // Se estiver editando um existente, atualiza. Senão, cria novo.
+            if (currentReportId) {
+                try {
+                    await db.collection('reports').doc(currentReportId).update(reportData);
+                    showSyncStatus('✓ Relatório atualizado');
+                } catch (error) {
+                    console.error('Erro ao atualizar:', error);
+                    alert('Erro ao atualizar relatório');
+                }
+            } else {
+                try {
+                    reportData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                    const docRef = await db.collection('reports').add(reportData);
+                    currentReportId = docRef.id;
+                    showSyncStatus('✓ Relatório salvo no Firebase');
+                } catch (error) {
+                    console.error('Erro ao salvar:', error);
+                    alert('Erro ao salvar relatório');
+                }
+            }
+
+            // Recarregar lista
+            loadUserReports();
+        }
+
+        // Carregar relatórios do usuário logado
+        async function loadUserReports() {
+            if (!currentUser) return;
+
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const reportsList = document.getElementById('reportsList');
+            
+            loadingIndicator.style.display = 'inline-block';
+            reportsList.innerHTML = '<div class="empty-state"><p>Carregando...</p></div>';
+
+            try {
+                // Query filtrada por userId - cada usuário vê apenas seus relatórios
+                const snapshot = await db.collection('reports')
+                    .where('userId', '==', currentUser.uid)
+                    .orderBy('createdAt', 'desc')
+                    .get();
+
+                loadingIndicator.style.display = 'none';
+
+                if (snapshot.empty) {
+                    reportsList.innerHTML = `
+                        <div class="empty-state">
+                            <p>Nenhum relatório salvo ainda</p>
+                            <p style="font-size: 0.9em; margin-top: 10px;">Preencha o formulário e clique em "Salvar no Firebase"</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                reportsList.innerHTML = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    const date = data.dataRonda ? formatDate(data.dataRonda) : 'Sem data';
+                    const title = data.viatura || 'Relatório sem viatura';
+                    
+                    return `
+                        <div class="report-item">
+                            <div class="report-info">
+                                <div class="report-title">${title} - ${date}</div>
+                                <div class="report-date">
+                                    Criado em: ${data.createdAt ? data.createdAt.toDate().toLocaleString('pt-BR') : 'Data desconhecida'}
+                                </div>
+                            </div>
+                            <div class="report-actions">
+                                <button class="btn-small btn-primary" onclick="carregarRelatorioFirebase('${doc.id}')">Carregar</button>
+                                <button class="btn-small btn-danger" onclick="excluirRelatorioFirebase('${doc.id}')">Excluir</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('Erro ao carregar relatórios:', error);
+                loadingIndicator.style.display = 'none';
+                reportsList.innerHTML = '<div class="empty-state"><p>Erro ao carregar relatórios</p></div>';
+            }
+        }
+
+        // Carregar relatório específico do Firebase
+        async function carregarRelatorioFirebase(reportId) {
+            if (!currentUser) return;
+
+            try {
+                const doc = await db.collection('reports').doc(reportId).get();
+                
+                if (!doc.exists) {
+                    alert('Relatório não encontrado');
+                    return;
+                }
+
+                const data = doc.data();
+                
+                // Verificar se pertence ao usuário atual (segurança extra)
+                if (data.userId !== currentUser.uid) {
+                    alert('Você não tem permissão para ver este relatório');
+                    return;
+                }
+
+                // Preencher formulário
+                populateForm(data);
+                currentReportId = reportId;
+                
+                showSyncStatus('✓ Relatório carregado');
+                
+                // Scroll para o topo
+                window.scrollTo(0, 0);
+
+            } catch (error) {
+                console.error('Erro ao carregar:', error);
+                alert('Erro ao carregar relatório');
+            }
+        }
+
+        // Excluir relatório do Firebase
+        async function excluirRelatorioFirebase(reportId) {
+            if (!confirm('Tem certeza que deseja excluir este relatório permanentemente?')) {
+                return;
+            }
+
+            try {
+                // Verificar ownership antes de excluir
+                const doc = await db.collection('reports').doc(reportId).get();
+                if (doc.exists && doc.data().userId !== currentUser.uid) {
+                    alert('Você não tem permissão para excluir este relatório');
+                    return;
+                }
+
+                await db.collection('reports').doc(reportId).delete();
+                
+                // Se estava editando este relatório, limpa o ID atual
+                if (currentReportId === reportId) {
+                    currentReportId = null;
+                    limparFormulario();
+                }
+
+                showSyncStatus('✓ Relatório excluído');
+                loadUserReports();
+
+            } catch (error) {
+                console.error('Erro ao excluir:', error);
+                alert('Erro ao excluir relatório');
+            }
+        }
+
+        // ==========================================
+        // FUNÇÕES AUXILIARES
+        // ==========================================
+
+        function collectFormData() {
+            const data = {};
+            
+            // Todos os campos de texto
+            formFields.forEach(field => {
+                const element = document.getElementById(field);
+                if (element) {
+                    data[field] = element.value;
+                }
+            });
+
+            // Checkboxes
+            checkboxFields.forEach(field => {
+                const element = document.getElementById(field);
+                if (element) {
+                    data[field] = element.checked;
+                }
+            });
+
+            return data;
+        }
+
+        function populateForm(data) {
+            // Campos de texto
+            formFields.forEach(field => {
+                const element = document.getElementById(field);
+                if (element && data[field] !== undefined) {
+                    element.value = data[field];
+                }
+            });
+
+            // Checkboxes
+            checkboxFields.forEach(field => {
+                const element = document.getElementById(field);
+                if (element && data[field] !== undefined) {
+                    element.checked = data[field];
+                }
+            });
+
+            calcularKm();
+            updatePreview();
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const [ano, mes, dia] = dateString.split('-');
+            return `${dia}/${mes}/${ano}`;
+        }
+
+        function showSyncStatus(message) {
+            const status = document.getElementById('syncStatus');
+            status.textContent = message;
+            status.classList.add('show');
+            setTimeout(() => {
+                status.classList.remove('show');
+            }, 3000);
+        }
+
+        // ==========================================
+        // CÓDIGO ORIGINAL DO FORMULÁRIO (ATUALIZADO)
+        // ==========================================
+
         const formFields = [
             'dataRonda', 'turnoInicio', 'turnoFim', 'viatura', 'postoGrad', 'reDc', 'nomeGuerra',
             'kmInicio', 'kmFinal', 'motRe', 'motNomeGuerra', 'auxRe', 'auxNomeGuerra',
@@ -1249,7 +1855,7 @@
             updatePreview();
         }
 
-        // Atualizar visualização do relatório - ATUALIZADO
+        // Atualizar visualização do relatório
         function updatePreview() {
             // Campos de texto
             formFields.forEach(field => {
@@ -1313,88 +1919,6 @@
             document.body.appendChild(btnVoltar);
         }
 
-        // Salvar rascunho no localStorage
-        function salvarRascunho() {
-            const data = {};
-            formFields.forEach(field => {
-                data[field] = document.getElementById(field).value;
-            });
-            checkboxFields.forEach(field => {
-                data[field] = document.getElementById(field).checked;
-            });
-
-            const timestamp = new Date().toLocaleString('pt-BR');
-            const savedReports = JSON.parse(localStorage.getItem('rondasCPI10') || '[]');
-            savedReports.push({
-                id: Date.now(),
-                data: timestamp,
-                content: data
-            });
-
-            localStorage.setItem('rondasCPI10', JSON.stringify(savedReports));
-            alert('Rascunho salvo com sucesso!\nData: ' + timestamp);
-            listarRascunhos();
-        }
-
-        // Listar rascunhos salvos
-        function listarRascunhos() {
-            const savedReports = JSON.parse(localStorage.getItem('rondasCPI10') || '[]');
-            const container = document.getElementById('savedReports');
-            const list = document.getElementById('reportsList');
-
-            if (savedReports.length === 0) {
-                container.style.display = 'none';
-                return;
-            }
-
-            container.style.display = 'block';
-            list.innerHTML = savedReports.map(report => `
-                <div class="report-item">
-                    <span>Rascunho #${report.id} - ${report.data}</span>
-                    <div>
-                        <button onclick="carregarRascunho(${report.id})" style="padding: 5px 10px; margin-right: 5px; background: #003366; color: white; border: none; border-radius: 3px; cursor: pointer;">Carregar</button>
-                        <button onclick="excluirRascunho(${report.id})" style="padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer;">Excluir</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        // Carregar rascunho
-        function carregarRascunho(id) {
-            const savedReports = JSON.parse(localStorage.getItem('rondasCPI10') || '[]');
-            const report = savedReports.find(r => r.id === id);
-            
-            if (report && report.content) {
-                formFields.forEach(field => {
-                    const element = document.getElementById(field);
-                    if (element && report.content[field] !== undefined) {
-                        element.value = report.content[field];
-                    }
-                });
-                
-                checkboxFields.forEach(field => {
-                    const element = document.getElementById(field);
-                    if (element && report.content[field] !== undefined) {
-                        element.checked = report.content[field];
-                    }
-                });
-                
-                calcularKm();
-                updatePreview();
-                alert('Rascunho carregado com sucesso!');
-            }
-        }
-
-        // Excluir rascunho
-        function excluirRascunho(id) {
-            if (confirm('Deseja realmente excluir este rascunho?')) {
-                let savedReports = JSON.parse(localStorage.getItem('rondasCPI10') || '[]');
-                savedReports = savedReports.filter(r => r.id !== id);
-                localStorage.setItem('rondasCPI10', JSON.stringify(savedReports));
-                listarRascunhos();
-            }
-        }
-
         // Limpar formulário
         function limparFormulario() {
             if (confirm('Deseja limpar todos os campos?')) {
@@ -1408,52 +1932,36 @@
                     if (element) element.checked = false;
                 });
                 
+                currentReportId = null;
+                calcularKm();
                 updatePreview();
+                
+                // Restaurar data atual
+                const hoje = new Date().toISOString().split('T')[0];
+                document.getElementById('dataRonda').value = hoje;
             }
         }
 
-        // Carregar dados ao iniciar
-        window.onload = function() {
-            listarRascunhos();
-            
-            // Definir data atual como padrão
-            const hoje = new Date().toISOString().split('T')[0];
-            document.getElementById('dataRonda').value = hoje;
-            updatePreview();
-        };
-
-        // Salvar automaticamente a cada 30 segundos
+        // Auto-save local (backup)
         setInterval(() => {
-            const data = {};
-            formFields.forEach(field => {
-                data[field] = document.getElementById(field).value;
-            });
-            checkboxFields.forEach(field => {
-                data[field] = document.getElementById(field).checked;
-            });
-            localStorage.setItem('rascunhoAuto', JSON.stringify(data));
+            if (currentUser) {
+                const data = collectFormData();
+                localStorage.setItem('autosave_' + currentUser.uid, JSON.stringify(data));
+            }
         }, 30000);
 
-        // Restaurar autosave ao carregar
+        // Restaurar auto-save ao carregar
         window.addEventListener('load', () => {
-            const autoSave = localStorage.getItem('rascunhoAuto');
-            if (autoSave) {
-                const data = JSON.parse(autoSave);
-                formFields.forEach(field => {
-                    const element = document.getElementById(field);
-                    if (element && data[field] && !element.value) {
-                        element.value = data[field];
+            // Só restaura se não estiver carregando um relatório do Firebase
+            setTimeout(() => {
+                if (currentUser && !currentReportId) {
+                    const autoSave = localStorage.getItem('autosave_' + currentUser.uid);
+                    if (autoSave) {
+                        const data = JSON.parse(autoSave);
+                        populateForm(data);
                     }
-                });
-                checkboxFields.forEach(field => {
-                    const element = document.getElementById(field);
-                    if (element && data[field] !== undefined) {
-                        element.checked = data[field];
-                    }
-                });
-                calcularKm();
-                updatePreview();
-            }
+                }
+            }, 2000);
         });
     </script>
 </body>
