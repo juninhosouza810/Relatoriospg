@@ -1456,39 +1456,147 @@
         // ==========================================
         // CONFIGURAÇÃO DO FIREBASE - SUBSTITUA COM SUAS CREDENCIAIS
         // ==========================================
-        const firebaseConfig = {
-            apiKey: "AIzaSyDEGq9oTgi7JT-v-hGLHCOrZBMC5V8mY0M",
-            authDomain: "relatorio-supervisor-4a508.firebaseapp.com",
-            projectId: "relatorio-supervisor-4a508",
-            storageBucket: "relatorio-supervisor-4a508.firebasestorage.app",
-            messagingSenderId: "305868632387",
-            appId: "1:305868632387:web:2c0f95976b7efc54437ff6",
-            measurementId: "G-SN5SGXYNRH"
-        };
-
-        // Inicializar Firebase
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-
-        // Variável global para usuário atual
-        let currentUser = null;
-        let currentReportId = null;
-
         // ==========================================
-        // AUTENTICAÇÃO
-        // ==========================================
+// CONFIGURAÇÃO DO FIREBASE - SUBSTITUA COM SUAS CREDENCIAIS REAIS
+// ==========================================
+const firebaseConfig = {
+  apiKey: "AIzaSyDEGq9oTgi7JT-v-hGLHCOrZBMC5V8mY0M",
+  authDomain: "relatorio-supervisor-4a508.firebaseapp.com",
+  projectId: "relatorio-supervisor-4a508",
+  storageBucket: "relatorio-supervisor-4a508.firebasestorage.app",
+  messagingSenderId: "305868632387",
+  appId: "1:305868632387:web:2c0f95976b7efc54437ff6",
+  measurementId: "G-SN5SGXYNRH"
+};
+
+// Inicializar Firebase
+try {
+    firebase.initializeApp(firebaseConfig);
+    console.log("✅ Firebase inicializado com sucesso");
+} catch (error) {
+    console.error("❌ Erro ao inicializar Firebase:", error);
+}
+
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// Variável global
+let currentUser = null;
+let currentReportId = null;
+
+// ==========================================
+// AUTENTICAÇÃO
+// ==========================================
+
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        currentUser = user;
+        console.log("✅ Usuário logado:", user.email);
+        showApp();
+        // Pequeno delay para garantir que tudo carregou
+        setTimeout(loadUserReports, 500);
+    } else {
+        console.log("ℹ️ Nenhum usuário logado");
+        showLogin();
+    }
+});
+
+// ==========================================
+// BANCO DE DADOS - VERSÃO COM LOG DE ERROS
+// ==========================================
+
+async function loadUserReports() {
+    if (!currentUser) {
+        console.error("❌ Tentativa de carregar relatórios sem usuário logado");
+        return;
+    }
+
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const reportsList = document.getElementById('reportsList');
+    
+    loadingIndicator.style.display = 'inline-block';
+    reportsList.innerHTML = '<div class="empty-state"><p>Carregando...</p></div>';
+
+    try {
+        console.log("🔍 Buscando relatórios para usuário:", currentUser.uid);
         
-        // Verificar estado de autenticação
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                currentUser = user;
-                showApp();
-                loadUserReports();
-            } else {
-                showLogin();
-            }
-        });
+        // Query simples primeiro (sem ordenação para teste)
+        const snapshot = await db.collection('reports')
+            .where('userId', '==', currentUser.uid)
+            .get();
+
+        console.log("📊 Relatórios encontrados:", snapshot.size);
+
+        loadingIndicator.style.display = 'none';
+
+        if (snapshot.empty) {
+            reportsList.innerHTML = `
+                <div class="empty-state">
+                    <p>📭 Nenhum relatório salvo ainda</p>
+                    <p style="font-size: 0.9em; margin-top: 10px;">
+                        Preencha o formulário e clique em <strong>"Salvar no Firebase"</strong>
+                    </p>
+                </div>
+            `;
+            return;
+        }
+
+        reportsList.innerHTML = snapshot.docs.map(doc => {
+            const data = doc.data();
+            const date = data.dataRonda ? formatDate(data.dataRonda) : 'Sem data';
+            const title = data.viatura || 'Relatório sem viatura';
+            
+            return `
+                <div class="report-item">
+                    <div class="report-info">
+                        <div class="report-title">🚔 ${title} - ${date}</div>
+                        <div class="report-date">
+                            Criado em: ${data.createdAt ? new Date(data.createdAt.toDate()).toLocaleString('pt-BR') : 'Data desconhecida'}
+                        </div>
+                    </div>
+                    <div class="report-actions">
+                        <button class="btn-small btn-primary" onclick="carregarRelatorioFirebase('${doc.id}')">
+                            📂 Carregar
+                        </button>
+                        <button class="btn-small btn-danger" onclick="excluirRelatorioFirebase('${doc.id}')">
+                            🗑️ Excluir
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+    } catch (error) {
+        console.error("❌ Erro detalhado ao carregar:", error);
+        loadingIndicator.style.display = 'none';
+        
+        let mensagemErro = "Erro desconhecido";
+        
+        if (error.code === 'permission-denied') {
+            mensagemErro = "Permissão negada. Verifique as regras do Firestore.";
+        } else if (error.code === 'failed-precondition') {
+            mensagemErro = "Índice não criado. Crie o índice no Firebase.";
+        } else if (error.message.includes('index')) {
+            mensagemErro = "É necessário criar um índice. Verifique o console.";
+        }
+        
+        reportsList.innerHTML = `
+            <div class="empty-state" style="color: #dc3545;">
+                <p>❌ ${mensagemErro}</p>
+                <p style="font-size: 0.85em; margin-top: 10px;">
+                    Código: ${error.code}<br>
+                    ${error.message}
+                </p>
+                <button onclick="location.reload()" style="margin-top: 15px; padding: 8px 16px;">
+                    🔄 Tentar novamente
+                </button>
+            </div>
+        `;
+    }
+}
+
+// Resto das funções permanece igual...
+// (salvarRascunhoFirebase, carregarRelatorioFirebase, excluirRelatorioFirebase);
 
         function showLogin() {
             document.getElementById('loginScreen').style.display = 'flex';
@@ -1967,4 +2075,5 @@
     </script>
 </body>
 </html>
+
 
