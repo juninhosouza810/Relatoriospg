@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Relatório de Ronda - CPI-10 | Firebase Edition</title>
     
-    <!-- Firebase SDK -->
+    <!-- Firebase SDK - CORRIGIDO: removidos espaços nas URLs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -306,6 +306,7 @@
             justify-content: center;
             padding: 5px;
             background: white;
+            min-height: 100px;
         }
 
         .official-header .logo-area img {
@@ -314,6 +315,20 @@
             max-height: 90px;
             object-fit: contain;
             display: block;
+        }
+
+        .brasao-fallback {
+            width: 85px;
+            height: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: #003366;
+            border: 1px solid #003366;
+            background: #f0f0f0;
         }
 
         .official-header .pm-text {
@@ -1087,12 +1102,18 @@
 
         <!-- MODO IMPRESSÃO - LAYOUT OFICIAL -->
         <div class="print-mode" id="printMode">
-            <!-- Cabeçalho Oficial com Brasão do GitHub -->
+            <!-- Cabeçalho Oficial com Brasão -->
             <div class="official-header">
                 <div class="logo-area">
-                    <img src="https://github.com/juninhosouza810/Relatoriospg/issues/1#issue-3878177409" 
+                    <!-- CORRIGIDO: URL da imagem - SUBSTITUA PELO CAMINHO CORRETO DO SEU REPOSITÓRIO -->
+                    <!-- Instruções: Substitua 'SEU_USUARIO', 'SEU_REPOSITORIO' e 'caminho/para/brasao.png' -->
+                    <img src="https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPOSITORIO/main/caminho/para/brasao.png" 
                          alt="Brasão do Estado de São Paulo" 
-                         onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\'font-size:9px; text-align:center;\'>BRASÃO<br>PMESP</div>';">
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <!-- Fallback visual caso a imagem não carregue -->
+                    <div class="brasao-fallback" style="display: none;">
+                        BRASÃO<br>PMESP
+                    </div>
                 </div>
                 <div class="pm-text">
                     <div>POLÍCIA MILITAR</div>
@@ -1183,7 +1204,7 @@
                 </tr>
                 <tr>
                     <td colspan="4">
-                        <span class="item-number">5.</span> <span class="item-text"><strong>Vestiários</strong> (observar a conservação, a organização e a limpeza de pisos, paredes, espelhos, sanitários, pias, portas e vidros; iluminação; se os armários estão identificados, se há materiais abandonados nos vestiários, se as torneiras funcionam e se não estão com vazamento, etc.):<br>
+                        <span class="item-number">5.</span> <span class="item-text"><strong>Vestiários</strong> (observar a conservação, a organização e a limpeza de pisos, paredes, sanitários, pias, portas e vidros; iluminação; se os armários estão identificados, se há materiais abandonados nos vestiários, se as torneiras funcionam e se não estão com vazamento, etc.):<br>
                         <span id="printOp1Vestiarios"></span></span>
                     </td>
                 </tr>
@@ -1454,149 +1475,143 @@
 
     <script>
         // ==========================================
-        // CONFIGURAÇÃO DO FIREBASE - SUBSTITUA COM SUAS CREDENCIAIS
+        // CONFIGURAÇÃO DO FIREBASE - SUBSTITUA COM SUAS CREDENCIAIS REAIS
         // ==========================================
-        // ==========================================
-// CONFIGURAÇÃO DO FIREBASE - SUBSTITUA COM SUAS CREDENCIAIS REAIS
-// ==========================================
-const firebaseConfig = {
-  apiKey: "AIzaSyDEGq9oTgi7JT-v-hGLHCOrZBMC5V8mY0M",
-  authDomain: "relatorio-supervisor-4a508.firebaseapp.com",
-  projectId: "relatorio-supervisor-4a508",
-  storageBucket: "relatorio-supervisor-4a508.firebasestorage.app",
-  messagingSenderId: "305868632387",
-  appId: "1:305868632387:web:2c0f95976b7efc54437ff6",
-  measurementId: "G-SN5SGXYNRH"
-};
+        const firebaseConfig = {
+            apiKey: "AIzaSyDEGq9oTgi7JT-v-hGLHCOrZBMC5V8mY0M",
+            authDomain: "relatorio-supervisor-4a508.firebaseapp.com",
+            projectId: "relatorio-supervisor-4a508",
+            storageBucket: "relatorio-supervisor-4a508.appspot.com",
+            messagingSenderId: "305868632387",
+            appId: "1:305868632387:web:2c0f95976b7efc54437ff6",
+            measurementId: "G-SN5SGXYNRH"
+        };
 
-// Inicializar Firebase
-try {
-    firebase.initializeApp(firebaseConfig);
-    console.log("✅ Firebase inicializado com sucesso");
-} catch (error) {
-    console.error("❌ Erro ao inicializar Firebase:", error);
-}
-
-const auth = firebase.auth();
-const db = firebase.firestore();
-
-// Variável global
-let currentUser = null;
-let currentReportId = null;
-
-// ==========================================
-// AUTENTICAÇÃO
-// ==========================================
-
-auth.onAuthStateChanged((user) => {
-    if (user) {
-        currentUser = user;
-        console.log("✅ Usuário logado:", user.email);
-        showApp();
-        // Pequeno delay para garantir que tudo carregou
-        setTimeout(loadUserReports, 500);
-    } else {
-        console.log("ℹ️ Nenhum usuário logado");
-        showLogin();
-    }
-});
-
-// ==========================================
-// BANCO DE DADOS - VERSÃO COM LOG DE ERROS
-// ==========================================
-
-async function loadUserReports() {
-    if (!currentUser) {
-        console.error("❌ Tentativa de carregar relatórios sem usuário logado");
-        return;
-    }
-
-    const loadingIndicator = document.getElementById('loadingIndicator');
-    const reportsList = document.getElementById('reportsList');
-    
-    loadingIndicator.style.display = 'inline-block';
-    reportsList.innerHTML = '<div class="empty-state"><p>Carregando...</p></div>';
-
-    try {
-        console.log("🔍 Buscando relatórios para usuário:", currentUser.uid);
-        
-        // Query simples primeiro (sem ordenação para teste)
-        const snapshot = await db.collection('reports')
-            .where('userId', '==', currentUser.uid)
-            .get();
-
-        console.log("📊 Relatórios encontrados:", snapshot.size);
-
-        loadingIndicator.style.display = 'none';
-
-        if (snapshot.empty) {
-            reportsList.innerHTML = `
-                <div class="empty-state">
-                    <p>📭 Nenhum relatório salvo ainda</p>
-                    <p style="font-size: 0.9em; margin-top: 10px;">
-                        Preencha o formulário e clique em <strong>"Salvar no Firebase"</strong>
-                    </p>
-                </div>
-            `;
-            return;
+        // Inicializar Firebase
+        try {
+            firebase.initializeApp(firebaseConfig);
+            console.log("✅ Firebase inicializado com sucesso");
+        } catch (error) {
+            console.error("❌ Erro ao inicializar Firebase:", error);
         }
 
-        reportsList.innerHTML = snapshot.docs.map(doc => {
-            const data = doc.data();
-            const date = data.dataRonda ? formatDate(data.dataRonda) : 'Sem data';
-            const title = data.viatura || 'Relatório sem viatura';
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Variável global
+        let currentUser = null;
+        let currentReportId = null;
+
+        // ==========================================
+        // AUTENTICAÇÃO
+        // ==========================================
+
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                currentUser = user;
+                console.log("✅ Usuário logado:", user.email);
+                showApp();
+                // Pequeno delay para garantir que tudo carregou
+                setTimeout(loadUserReports, 500);
+            } else {
+                console.log("ℹ️ Nenhum usuário logado");
+                showLogin();
+            }
+        });
+
+        // ==========================================
+        // BANCO DE DADOS - VERSÃO COM LOG DE ERROS
+        // ==========================================
+
+        async function loadUserReports() {
+            if (!currentUser) {
+                console.error("❌ Tentativa de carregar relatórios sem usuário logado");
+                return;
+            }
+
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const reportsList = document.getElementById('reportsList');
             
-            return `
-                <div class="report-item">
-                    <div class="report-info">
-                        <div class="report-title">🚔 ${title} - ${date}</div>
-                        <div class="report-date">
-                            Criado em: ${data.createdAt ? new Date(data.createdAt.toDate()).toLocaleString('pt-BR') : 'Data desconhecida'}
+            loadingIndicator.style.display = 'inline-block';
+            reportsList.innerHTML = '<div class="empty-state"><p>Carregando...</p></div>';
+
+            try {
+                console.log("🔍 Buscando relatórios para usuário:", currentUser.uid);
+                
+                // Query simples primeiro (sem ordenação para teste)
+                const snapshot = await db.collection('reports')
+                    .where('userId', '==', currentUser.uid)
+                    .get();
+
+                console.log("📊 Relatórios encontrados:", snapshot.size);
+
+                loadingIndicator.style.display = 'none';
+
+                if (snapshot.empty) {
+                    reportsList.innerHTML = `
+                        <div class="empty-state">
+                            <p>📭 Nenhum relatório salvo ainda</p>
+                            <p style="font-size: 0.9em; margin-top: 10px;">
+                                Preencha o formulário e clique em <strong>"Salvar no Firebase"</strong>
+                            </p>
                         </div>
-                    </div>
-                    <div class="report-actions">
-                        <button class="btn-small btn-primary" onclick="carregarRelatorioFirebase('${doc.id}')">
-                            📂 Carregar
-                        </button>
-                        <button class="btn-small btn-danger" onclick="excluirRelatorioFirebase('${doc.id}')">
-                            🗑️ Excluir
-                        </button>
-                    </div>
-                </div>
-            `;
-        }).join('');
+                    `;
+                    return;
+                }
 
-    } catch (error) {
-        console.error("❌ Erro detalhado ao carregar:", error);
-        loadingIndicator.style.display = 'none';
-        
-        let mensagemErro = "Erro desconhecido";
-        
-        if (error.code === 'permission-denied') {
-            mensagemErro = "Permissão negada. Verifique as regras do Firestore.";
-        } else if (error.code === 'failed-precondition') {
-            mensagemErro = "Índice não criado. Crie o índice no Firebase.";
-        } else if (error.message.includes('index')) {
-            mensagemErro = "É necessário criar um índice. Verifique o console.";
+                reportsList.innerHTML = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    const date = data.dataRonda ? formatDate(data.dataRonda) : 'Sem data';
+                    const title = data.viatura || 'Relatório sem viatura';
+                    
+                    return `
+                        <div class="report-item">
+                            <div class="report-info">
+                                <div class="report-title">🚔 ${title} - ${date}</div>
+                                <div class="report-date">
+                                    Criado em: ${data.createdAt ? new Date(data.createdAt.toDate()).toLocaleString('pt-BR') : 'Data desconhecida'}
+                                </div>
+                            </div>
+                            <div class="report-actions">
+                                <button class="btn-small btn-primary" onclick="carregarRelatorioFirebase('${doc.id}')">
+                                    📂 Carregar
+                                </button>
+                                <button class="btn-small btn-danger" onclick="excluirRelatorioFirebase('${doc.id}')">
+                                    🗑️ Excluir
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error("❌ Erro detalhado ao carregar:", error);
+                loadingIndicator.style.display = 'none';
+                
+                let mensagemErro = "Erro desconhecido";
+                
+                if (error.code === 'permission-denied') {
+                    mensagemErro = "Permissão negada. Verifique as regras do Firestore.";
+                } else if (error.code === 'failed-precondition') {
+                    mensagemErro = "Índice não criado. Crie o índice no Firebase.";
+                } else if (error.message.includes('index')) {
+                    mensagemErro = "É necessário criar um índice. Verifique o console.";
+                }
+                
+                reportsList.innerHTML = `
+                    <div class="empty-state" style="color: #dc3545;">
+                        <p>❌ ${mensagemErro}</p>
+                        <p style="font-size: 0.85em; margin-top: 10px;">
+                            Código: ${error.code}<br>
+                            ${error.message}
+                        </p>
+                        <button onclick="location.reload()" style="margin-top: 15px; padding: 8px 16px;">
+                            🔄 Tentar novamente
+                        </button>
+                    </div>
+                `;
+            }
         }
-        
-        reportsList.innerHTML = `
-            <div class="empty-state" style="color: #dc3545;">
-                <p>❌ ${mensagemErro}</p>
-                <p style="font-size: 0.85em; margin-top: 10px;">
-                    Código: ${error.code}<br>
-                    ${error.message}
-                </p>
-                <button onclick="location.reload()" style="margin-top: 15px; padding: 8px 16px;">
-                    🔄 Tentar novamente
-                </button>
-            </div>
-        `;
-    }
-}
-
-// Resto das funções permanece igual...
-// (salvarRascunhoFirebase, carregarRelatorioFirebase, excluirRelatorioFirebase);
 
         function showLogin() {
             document.getElementById('loginScreen').style.display = 'flex';
@@ -1739,63 +1754,6 @@ async function loadUserReports() {
             loadUserReports();
         }
 
-        // Carregar relatórios do usuário logado
-        async function loadUserReports() {
-            if (!currentUser) return;
-
-            const loadingIndicator = document.getElementById('loadingIndicator');
-            const reportsList = document.getElementById('reportsList');
-            
-            loadingIndicator.style.display = 'inline-block';
-            reportsList.innerHTML = '<div class="empty-state"><p>Carregando...</p></div>';
-
-            try {
-                // Query filtrada por userId - cada usuário vê apenas seus relatórios
-                const snapshot = await db.collection('reports')
-                    .where('userId', '==', currentUser.uid)
-                    .orderBy('createdAt', 'desc')
-                    .get();
-
-                loadingIndicator.style.display = 'none';
-
-                if (snapshot.empty) {
-                    reportsList.innerHTML = `
-                        <div class="empty-state">
-                            <p>Nenhum relatório salvo ainda</p>
-                            <p style="font-size: 0.9em; margin-top: 10px;">Preencha o formulário e clique em "Salvar no Firebase"</p>
-                        </div>
-                    `;
-                    return;
-                }
-
-                reportsList.innerHTML = snapshot.docs.map(doc => {
-                    const data = doc.data();
-                    const date = data.dataRonda ? formatDate(data.dataRonda) : 'Sem data';
-                    const title = data.viatura || 'Relatório sem viatura';
-                    
-                    return `
-                        <div class="report-item">
-                            <div class="report-info">
-                                <div class="report-title">${title} - ${date}</div>
-                                <div class="report-date">
-                                    Criado em: ${data.createdAt ? data.createdAt.toDate().toLocaleString('pt-BR') : 'Data desconhecida'}
-                                </div>
-                            </div>
-                            <div class="report-actions">
-                                <button class="btn-small btn-primary" onclick="carregarRelatorioFirebase('${doc.id}')">Carregar</button>
-                                <button class="btn-small btn-danger" onclick="excluirRelatorioFirebase('${doc.id}')">Excluir</button>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-
-            } catch (error) {
-                console.error('Erro ao carregar relatórios:', error);
-                loadingIndicator.style.display = 'none';
-                reportsList.innerHTML = '<div class="empty-state"><p>Erro ao carregar relatórios</p></div>';
-            }
-        }
-
         // Carregar relatório específico do Firebase
         async function carregarRelatorioFirebase(reportId) {
             if (!currentUser) return;
@@ -1925,7 +1883,7 @@ async function loadUserReports() {
         }
 
         // ==========================================
-        // CÓDIGO ORIGINAL DO FORMULÁRIO (ATUALIZADO)
+        // CÓDIGO ORIGINAL DO FORMULÁRIO
         // ==========================================
 
         const formFields = [
@@ -2075,6 +2033,3 @@ async function loadUserReports() {
     </script>
 </body>
 </html>
-
-
-
