@@ -1512,29 +1512,12 @@
                 }).join('');
 
             } catch (error) {
-                console.error("❌ Erro detalhado ao carregar:", error);
+                console.error("❌ Erro:", error);
                 loadingIndicator.style.display = 'none';
-                
-                let mensagemErro = "Erro desconhecido";
-                
-                if (error.code === 'permission-denied') {
-                    mensagemErro = "Permissão negada. Verifique as regras do Firestore.";
-                } else if (error.code === 'failed-precondition') {
-                    mensagemErro = "Índice não criado. Crie o índice no Firebase.";
-                } else if (error.message.includes('index')) {
-                    mensagemErro = "É necessário criar um índice. Verifique o console.";
-                }
-                
                 reportsList.innerHTML = `
                     <div class="empty-state" style="color: #dc3545;">
-                        <p>❌ ${mensagemErro}</p>
-                        <p style="font-size: 0.85em; margin-top: 10px;">
-                            Código: ${error.code}<br>
-                            ${error.message}
-                        </p>
-                        <button onclick="location.reload()" style="margin-top: 15px; padding: 8px 16px;">
-                            🔄 Tentar novamente
-                        </button>
+                        <p>❌ Erro ao carregar seus relatórios</p>
+                        <button onclick="loadUserReports()" style="margin-top: 10px;">🔄 Tentar novamente</button>
                     </div>
                 `;
             }
@@ -1542,6 +1525,7 @@
 
         function showLogin() {
             document.getElementById('loginScreen').style.display = 'flex';
+            document.get
             document.getElementById('appContainer').style.display = 'none';
         }
 
@@ -1550,16 +1534,68 @@
             document.getElementById('appContainer').style.display = 'block';
             document.getElementById('editMode').style.display = 'block';
             
-            // Atualizar info do usuário
+            // CRÍTICO: Mostrar UID para debug e confirmação de isolamento
             document.getElementById('userName').textContent = currentUser.displayName || 'Usuário';
             document.getElementById('userEmail').textContent = currentUser.email;
+            document.getElementById('userUid').textContent = `UID: ${currentUser.uid.substring(0, 8)}...`;
+            document.getElementById('displayUid').textContent = currentUser.uid;
+            
+            // CRÍTICO: Sempre começar com formulário limpo - NUNCA restaurar auto-save automaticamente
+            limparFormularioSilencioso();
             
             // Definir data atual
             const hoje = new Date().toISOString().split('T')[0];
             document.getElementById('dataRonda').value = hoje;
         }
 
-        // Login
+        // ==========================================
+        // LIMPEZA TOTAL - ISOLAMENTO GARANTIDO
+        // ==========================================
+
+        function limparFormularioSilencioso() {
+            // Limpar todos os campos de texto
+            formFields.forEach(field => {
+                const element = document.getElementById(field);
+                if (element) element.value = '';
+            });
+            
+            // Limpar todos os checkboxes
+            checkboxFields.forEach(field => {
+                const element = document.getElementById(field);
+                if (element) element.checked = false;
+            });
+            
+            // Resetar variáveis de controle
+            currentReportId = null;
+            isNewReport = true;
+            
+            // Atualizar indicador visual
+            updateStatusIndicator();
+            
+            // Recalcular e atualizar preview
+            calcularKm();
+            updatePreview();
+            
+            console.log("🧹 Formulário limpo completamente");
+        }
+
+        function updateStatusIndicator() {
+            const indicator = document.getElementById('reportStatusIndicator');
+            if (!indicator) return;
+            
+            if (isNewReport) {
+                indicator.className = 'report-status';
+                indicator.innerHTML = '📝 <strong>Novo Relatório</strong> - Preencha os dados abaixo';
+            } else {
+                indicator.className = 'report-status editing';
+                indicator.innerHTML = `✏️ <strong>Editando Relatório</strong> - ID: ${currentReportId.substring(0, 12)}...`;
+            }
+        }
+
+        // ==========================================
+        // AUTENTICAÇÃO
+        // ==========================================
+
         function login() {
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
@@ -1571,6 +1607,9 @@
                 return;
             }
 
+            // Limpar erro anterior
+            errorDiv.style.display = 'none';
+            
             auth.signInWithEmailAndPassword(email, password)
                 .catch((error) => {
                     errorDiv.textContent = getErrorMessage(error.code);
@@ -1578,7 +1617,6 @@
                 });
         }
 
-        // Registro
         function register() {
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
@@ -1598,11 +1636,12 @@
 
             auth.createUserWithEmailAndPassword(email, password)
                 .then((userCredential) => {
-                    // Criar perfil do usuário no Firestore
+                    // Criar perfil do usuário no Firestore com UID correto
                     return db.collection('users').doc(userCredential.user.uid).set({
                         email: email,
                         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        displayName: email.split('@')[0]
+                        displayName: email.split('@')[0],
+                        userId: userCredential.user.uid // CRÍTICO: Vincular ao UID
                     });
                 })
                 .catch((error) => {
@@ -1611,12 +1650,12 @@
                 });
         }
 
-        // Logout
         function logout() {
+            // CRÍTICO: Limpar tudo antes de fazer logout
+            resetarTudo();
             auth.signOut();
         }
 
-        // Tradução de erros
         function getErrorMessage(code) {
             const errors = {
                 'auth/invalid-email': 'Email inválido',
@@ -1631,11 +1670,11 @@
         }
 
         // ==========================================
-        // BANCO DE DADOS - FIRESTORE
+        // CRUD COM SEGURANÇA MÁXIMA
         // ==========================================
 
-        // Salvar relatório no Firebase
         async function salvarRascunhoFirebase() {
+            // CRÍTICO: Verificar autenticação
             if (!currentUser) {
                 alert('Você precisa estar logado');
                 return;
@@ -1643,47 +1682,63 @@
 
             const formData = collectFormData();
             
-            // Validar campos obrigatórios mínimos
+            // Validação mínima
             if (!formData.dataRonda) {
                 alert('Preencha pelo menos a data da ronda');
                 return;
             }
 
+            // CRÍTICO: Sempre usar o UID do usuário logado - NUNCA confiar em dados do formulário
             const reportData = {
-                userId: currentUser.uid,
+                userId: currentUser.uid, // SEGURANÇA: Vincular ao UID autenticado
                 userEmail: currentUser.email,
                 ...formData,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
-            // Se estiver editando um existente, atualiza. Senão, cria novo.
-            if (currentReportId) {
-                try {
-                    await db.collection('reports').doc(currentReportId).update(reportData);
+            try {
+                if (currentReportId) {
+                    // UPDATE: Verificar ownership antes de atualizar
+                    const docRef = db.collection('reports').doc(currentReportId);
+                    const doc = await docRef.get();
+                    
+                    if (!doc.exists) {
+                        alert('Relatório não encontrado');
+                        return;
+                    }
+                    
+                    // CRÍTICO: Verificar se o relatório pertence ao usuário logado
+                    if (doc.data().userId !== currentUser.uid) {
+                        console.error("🚫 Tentativa não autorizada de edição:", currentReportId);
+                        alert('Você não tem permissão para editar este relatório');
+                        return;
+                    }
+
+                    await docRef.update(reportData);
                     showSyncStatus('✓ Relatório atualizado');
-                } catch (error) {
-                    console.error('Erro ao atualizar:', error);
-                    alert('Erro ao atualizar relatório');
-                }
-            } else {
-                try {
+                } else {
+                    // CREATE: Novo relatório
                     reportData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
                     const docRef = await db.collection('reports').add(reportData);
                     currentReportId = docRef.id;
-                    showSyncStatus('✓ Relatório salvo no Firebase');
-                } catch (error) {
-                    console.error('Erro ao salvar:', error);
-                    alert('Erro ao salvar relatório');
+                    isNewReport = false;
+                    updateStatusIndicator();
+                    showSyncStatus('✓ Relatório salvo');
                 }
-            }
 
-            // Recarregar lista
-            loadUserReports();
+                loadUserReports();
+            } catch (error) {
+                console.error('❌ Erro ao salvar:', error);
+                alert('Erro ao salvar: ' + error.message);
+            }
         }
 
-        // Carregar relatório específico do Firebase
         async function carregarRelatorioFirebase(reportId) {
-            if (!currentUser) return;
+            // CRÍTICO: Verificar autenticação
+            if (!currentUser) {
+                alert('Faça login primeiro');
+                return;
+            }
 
             try {
                 const doc = await db.collection('reports').doc(reportId).get();
@@ -1695,54 +1750,68 @@
 
                 const data = doc.data();
                 
-                // Verificar se pertence ao usuário atual (segurança extra)
+                // CRÍTICO: Verificação rigorosa de ownership - NUNCA carregar dados de outro usuário
                 if (data.userId !== currentUser.uid) {
-                    alert('Você não tem permissão para ver este relatório');
+                    console.error("🚫 Acesso negado ao relatório:", reportId);
+                    alert('Acesso negado: Este relatório não pertence a você');
                     return;
                 }
 
-                // Preencher formulário
+                // Carregar dados no formulário
                 populateForm(data);
                 currentReportId = reportId;
+                isNewReport = false;
+                updateStatusIndicator();
                 
                 showSyncStatus('✓ Relatório carregado');
-                
-                // Scroll para o topo
                 window.scrollTo(0, 0);
 
             } catch (error) {
-                console.error('Erro ao carregar:', error);
+                console.error('❌ Erro ao carregar:', error);
                 alert('Erro ao carregar relatório');
             }
         }
 
-        // Excluir relatório do Firebase
         async function excluirRelatorioFirebase(reportId) {
             if (!confirm('Tem certeza que deseja excluir este relatório permanentemente?')) {
+                return;
+            }
+
+            // CRÍTICO: Verificar autenticação
+            if (!currentUser) {
+                alert('Faça login primeiro');
                 return;
             }
 
             try {
                 // Verificar ownership antes de excluir
                 const doc = await db.collection('reports').doc(reportId).get();
-                if (doc.exists && doc.data().userId !== currentUser.uid) {
+                
+                if (!doc.exists) {
+                    alert('Relatório não encontrado');
+                    return;
+                }
+                
+                if (doc.data().userId !== currentUser.uid) {
+                    console.error("🚫 Tentativa não autorizada de exclusão:", reportId);
                     alert('Você não tem permissão para excluir este relatório');
                     return;
                 }
 
                 await db.collection('reports').doc(reportId).delete();
                 
-                // Se estava editando este relatório, limpa o ID atual
+                // Se estava editando este relatório, limpar formulário
                 if (currentReportId === reportId) {
-                    currentReportId = null;
-                    limparFormulario();
+                    limparFormularioSilencioso();
+                    const hoje = new Date().toISOString().split('T')[0];
+                    document.getElementById('dataRonda').value = hoje;
                 }
 
                 showSyncStatus('✓ Relatório excluído');
                 loadUserReports();
 
             } catch (error) {
-                console.error('Erro ao excluir:', error);
+                console.error('❌ Erro ao excluir:', error);
                 alert('Erro ao excluir relatório');
             }
         }
@@ -1754,27 +1823,21 @@
         function collectFormData() {
             const data = {};
             
-            // Todos os campos de texto
             formFields.forEach(field => {
                 const element = document.getElementById(field);
-                if (element) {
-                    data[field] = element.value;
-                }
+                if (element) data[field] = element.value;
             });
 
-            // Checkboxes
             checkboxFields.forEach(field => {
                 const element = document.getElementById(field);
-                if (element) {
-                    data[field] = element.checked;
-                }
+                if (element) data[field] = element.checked;
             });
 
             return data;
         }
 
         function populateForm(data) {
-            // Campos de texto
+            // CRÍTICO: Nunca popular userId vindo de dados externos
             formFields.forEach(field => {
                 const element = document.getElementById(field);
                 if (element && data[field] !== undefined) {
@@ -1782,7 +1845,6 @@
                 }
             });
 
-            // Checkboxes
             checkboxFields.forEach(field => {
                 const element = document.getElementById(field);
                 if (element && data[field] !== undefined) {
@@ -1810,7 +1872,7 @@
         }
 
         // ==========================================
-        // CÓDIGO ORIGINAL DO FORMULÁRIO
+        // FORMULÁRIO E UI
         // ==========================================
 
         const formFields = [
@@ -1837,7 +1899,7 @@
             'rp2Giroflex', 'rp2Produtividade', 'rp2Treinamento', 'rp2BoEletronico'
         ];
 
-        // Calcular KM percorrido automaticamente
+        // Calcular KM percorrido
         document.getElementById('kmInicio').addEventListener('input', calcularKm);
         document.getElementById('kmFinal').addEventListener('input', calcularKm);
 
@@ -1849,9 +1911,7 @@
             updatePreview();
         }
 
-        // Atualizar visualização do relatório
         function updatePreview() {
-            // Campos de texto
             formFields.forEach(field => {
                 const element = document.getElementById(field);
                 const printElement = document.getElementById('print' + field.charAt(0).toUpperCase() + field.slice(1));
@@ -1860,14 +1920,12 @@
                 }
             });
 
-            // Campos de data formatados
             const dataRonda = document.getElementById('dataRonda').value;
             if (dataRonda) {
                 const [ano, mes, dia] = dataRonda.split('-');
                 document.getElementById('printData').textContent = `${dia}/${mes}/${ano}`;
             }
 
-            // Checkboxes
             checkboxFields.forEach(field => {
                 const checkbox = document.getElementById(field);
                 const printElement = document.getElementById('print' + field.charAt(0).toUpperCase() + field.slice(1));
@@ -1878,29 +1936,23 @@
                 }
             });
 
-            // Atualizar campos calculados
             document.getElementById('printKmPercorrido').textContent = document.getElementById('kmPercorrido').value;
-            
-            // Formatação especial para campos de tripulação
             document.getElementById('printEnc').textContent = document.getElementById('nomeGuerra').value;
             document.getElementById('printMot').textContent = document.getElementById('motRe').value;
             document.getElementById('printAux').textContent = document.getElementById('auxRe').value;
             
-            // Novos campos de nome de guerra
             const printMotNome = document.getElementById('printMotNomeGuerra');
             const printAuxNome = document.getElementById('printAuxNomeGuerra');
             if (printMotNome) printMotNome.textContent = document.getElementById('motNomeGuerra').value || '';
             if (printAuxNome) printAuxNome.textContent = document.getElementById('auxNomeGuerra').value || '';
         }
 
-        // Gerar Relatório (mostrar preview)
         function gerarRelatorio() {
             updatePreview();
             document.getElementById('editMode').style.display = 'none';
             document.getElementById('printMode').style.display = 'block';
             window.scrollTo(0, 0);
             
-            // Adicionar botão para voltar
             const btnVoltar = document.createElement('button');
             btnVoltar.innerHTML = '✏️ Voltar à Edição';
             btnVoltar.className = 'btn-warning no-print';
@@ -1913,53 +1965,26 @@
             document.body.appendChild(btnVoltar);
         }
 
-        // Limpar formulário
         function limparFormulario() {
-            if (confirm('Deseja limpar todos os campos?')) {
-                formFields.forEach(field => {
-                    const element = document.getElementById(field);
-                    if (element) element.value = '';
-                });
-                
-                checkboxFields.forEach(field => {
-                    const element = document.getElementById(field);
-                    if (element) element.checked = false;
-                });
-                
-                currentReportId = null;
-                calcularKm();
-                updatePreview();
-                
-                // Restaurar data atual
+            if (confirm('Deseja limpar todos os campos e começar um novo relatório?')) {
+                limparFormularioSilencioso();
                 const hoje = new Date().toISOString().split('T')[0];
                 document.getElementById('dataRonda').value = hoje;
             }
         }
 
-        // Auto-save local (backup)
-        setInterval(() => {
-            if (currentUser) {
-                const data = collectFormData();
-                localStorage.setItem('autosave_' + currentUser.uid, JSON.stringify(data));
-            }
-        }, 30000);
-
-        // Restaurar auto-save ao carregar
-        window.addEventListener('load', () => {
-            // Só restaura se não estiver carregando um relatório do Firebase
-            setTimeout(() => {
-                if (currentUser && !currentReportId) {
-                    const autoSave = localStorage.getItem('autosave_' + currentUser.uid);
-                    if (autoSave) {
-                        const data = JSON.parse(autoSave);
-                        populateForm(data);
-                    }
-                }
-            }, 2000);
-        });
+        // ==========================================
+        // AUTO-SAVE REMOVIDO - ISOLAMENTO TOTAL
+        // ==========================================
+        
+        // CRÍTICO: Não há mais auto-save automático para garantir isolamento completo
+        // Cada usuário sempre começa com formulário limpo após login
+        
+        // Se desejar implementar auto-save no futuro, deve ser:
+        // 1. Criptografado com chave do usuário
+        // 2. Sempre verificar UID antes de restaurar
+        // 3. Nunca restaurar automaticamente - sempre perguntar ao usuário
+        
     </script>
 </body>
 </html>
-
-
-
