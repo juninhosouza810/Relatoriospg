@@ -447,16 +447,12 @@
             color: #666;
         }
 
+        /* OCULTO: Informações de debug/isolamento não visíveis para o usuário */
         .user-isolation-warning {
-            background: #fff3cd;
-            border: 1px solid #ffc107;
-            color: #856404;
-            padding: 10px;
-            margin-bottom: 20px;
-            border-radius: 4px;
-            font-size: 0.9em;
+            display: none; /* OCULTO - mantido apenas para debug se necessário */
         }
 
+        /* Simplificado: Apenas indicador de status do relatório */
         .report-status {
             background: #e3f2fd;
             border-left: 4px solid #2196f3;
@@ -503,18 +499,21 @@
         <div class="user-info">
             <div>
                 <span id="userName">Usuário</span> | 
-                <small id="userEmail">email@pm.sp.gov.br</small> |
-                <small id="userUid" style="opacity: 0.7;"></small>
+                <small id="userEmail">email@pm.sp.gov.br</small>
+                <!-- OCULTO: UID não exibido na interface -->
+                <small id="userUid" style="display: none;"></small>
             </div>
             <button class="btn-logout" onclick="logout()">Sair</button>
         </div>
 
         <div class="edit-mode" id="editMode">
+            <!-- OCULTO: Aviso de isolamento removido da interface -->
             <div class="user-isolation-warning">
-                🔒 <strong>Modo Isolado:</strong> Você só tem acesso aos seus próprios relatórios. 
+                🔒 Modo Isolado: Você só tem acesso aos seus próprios relatórios. 
                 ID do usuário: <span id="displayUid"></span>
             </div>
 
+            <!-- Simplificado: Apenas indicador de status do relatório -->
             <div id="reportStatusIndicator" class="report-status">
                 📝 Novo Relatório - Preencha os dados abaixo
             </div>
@@ -1390,7 +1389,7 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
 
-        // Variáveis globais - CRÍTICO: Sempre null até login bem-sucedido
+        // Variáveis globais
         let currentUser = null;
         let currentReportId = null;
         let isNewReport = true;
@@ -1401,9 +1400,9 @@
 
         auth.onAuthStateChanged((user) => {
             if (user) {
-                // NOVO: Verificar se é realmente um usuário diferente
+                // Verificar se é troca de usuário
                 if (currentUser && currentUser.uid !== user.uid) {
-                    console.log("🔄 Troca de usuário detectada - limpando dados");
+                    console.log("🔄 Troca de usuário - limpando dados");
                     resetarTudo();
                 }
                 
@@ -1419,15 +1418,12 @@
         });
 
         function resetarTudo() {
-            // CRÍTICO: Limpar TODAS as variáveis e dados do formulário
             currentUser = null;
             currentReportId = null;
             isNewReport = true;
             
-            // Limpar formulário completamente
             limparFormularioSilencioso();
             
-            // Limpar lista de relatórios
             const reportsList = document.getElementById('reportsList');
             if (reportsList) {
                 reportsList.innerHTML = '<div class="empty-state"><p>Faça login para ver seus relatórios</p></div>';
@@ -1439,7 +1435,6 @@
         // ==========================================
 
         async function loadUserReports() {
-            // CRÍTICO: Verificar se tem usuário logado
             if (!currentUser) {
                 console.error("❌ Sem usuário logado");
                 return;
@@ -1454,9 +1449,8 @@
             try {
                 console.log("🔍 Buscando relatórios do usuário:", currentUser.uid);
                 
-                // CRÍTICO: Query sempre filtrada por userId específico
                 const snapshot = await db.collection('reports')
-                    .where('userId', '==', currentUser.uid) // Garante isolamento
+                    .where('userId', '==', currentUser.uid)
                     .orderBy('createdAt', 'desc')
                     .get();
 
@@ -1476,7 +1470,6 @@
                     return;
                 }
 
-                // CRÍTICO: Verificar novamente se o usuário ainda é o mesmo
                 if (!currentUser) return;
 
                 reportsList.innerHTML = snapshot.docs.map(doc => {
@@ -1485,7 +1478,7 @@
                     // Verificação extra de segurança
                     if (data.userId !== currentUser.uid) {
                         console.warn("⚠️ Relatório de outro usuário filtrado:", doc.id);
-                        return ''; // Não mostrar
+                        return '';
                     }
                     
                     const date = data.dataRonda ? formatDate(data.dataRonda) : 'Sem data';
@@ -1525,7 +1518,6 @@
 
         function showLogin() {
             document.getElementById('loginScreen').style.display = 'flex';
-            document.get
             document.getElementById('appContainer').style.display = 'none';
         }
 
@@ -1534,13 +1526,13 @@
             document.getElementById('appContainer').style.display = 'block';
             document.getElementById('editMode').style.display = 'block';
             
-            // CRÍTICO: Mostrar UID para debug e confirmação de isolamento
+            // OCULTO: UID não exibido na interface - apenas nome e email
             document.getElementById('userName').textContent = currentUser.displayName || 'Usuário';
             document.getElementById('userEmail').textContent = currentUser.email;
-            document.getElementById('userUid').textContent = `UID: ${currentUser.uid.substring(0, 8)}...`;
-            document.getElementById('displayUid').textContent = currentUser.uid;
+            // UID mantido no elemento mas oculto via CSS (display: none)
+            document.getElementById('userUid').textContent = currentUser.uid;
             
-            // CRÍTICO: Sempre começar com formulário limpo - NUNCA restaurar auto-save automaticamente
+            // Sempre começar com formulário limpo
             limparFormularioSilencioso();
             
             // Definir data atual
@@ -1553,30 +1545,25 @@
         // ==========================================
 
         function limparFormularioSilencioso() {
-            // Limpar todos os campos de texto
             formFields.forEach(field => {
                 const element = document.getElementById(field);
                 if (element) element.value = '';
             });
             
-            // Limpar todos os checkboxes
             checkboxFields.forEach(field => {
                 const element = document.getElementById(field);
                 if (element) element.checked = false;
             });
             
-            // Resetar variáveis de controle
             currentReportId = null;
             isNewReport = true;
             
-            // Atualizar indicador visual
             updateStatusIndicator();
             
-            // Recalcular e atualizar preview
             calcularKm();
             updatePreview();
             
-            console.log("🧹 Formulário limpo completamente");
+            console.log("🧹 Formulário limpo");
         }
 
         function updateStatusIndicator() {
@@ -1607,7 +1594,6 @@
                 return;
             }
 
-            // Limpar erro anterior
             errorDiv.style.display = 'none';
             
             auth.signInWithEmailAndPassword(email, password)
@@ -1636,12 +1622,11 @@
 
             auth.createUserWithEmailAndPassword(email, password)
                 .then((userCredential) => {
-                    // Criar perfil do usuário no Firestore com UID correto
                     return db.collection('users').doc(userCredential.user.uid).set({
                         email: email,
                         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                         displayName: email.split('@')[0],
-                        userId: userCredential.user.uid // CRÍTICO: Vincular ao UID
+                        userId: userCredential.user.uid
                     });
                 })
                 .catch((error) => {
@@ -1651,7 +1636,6 @@
         }
 
         function logout() {
-            // CRÍTICO: Limpar tudo antes de fazer logout
             resetarTudo();
             auth.signOut();
         }
@@ -1674,7 +1658,6 @@
         // ==========================================
 
         async function salvarRascunhoFirebase() {
-            // CRÍTICO: Verificar autenticação
             if (!currentUser) {
                 alert('Você precisa estar logado');
                 return;
@@ -1682,15 +1665,13 @@
 
             const formData = collectFormData();
             
-            // Validação mínima
             if (!formData.dataRonda) {
                 alert('Preencha pelo menos a data da ronda');
                 return;
             }
 
-            // CRÍTICO: Sempre usar o UID do usuário logado - NUNCA confiar em dados do formulário
             const reportData = {
-                userId: currentUser.uid, // SEGURANÇA: Vincular ao UID autenticado
+                userId: currentUser.uid,
                 userEmail: currentUser.email,
                 ...formData,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -1698,7 +1679,6 @@
 
             try {
                 if (currentReportId) {
-                    // UPDATE: Verificar ownership antes de atualizar
                     const docRef = db.collection('reports').doc(currentReportId);
                     const doc = await docRef.get();
                     
@@ -1707,7 +1687,6 @@
                         return;
                     }
                     
-                    // CRÍTICO: Verificar se o relatório pertence ao usuário logado
                     if (doc.data().userId !== currentUser.uid) {
                         console.error("🚫 Tentativa não autorizada de edição:", currentReportId);
                         alert('Você não tem permissão para editar este relatório');
@@ -1717,7 +1696,6 @@
                     await docRef.update(reportData);
                     showSyncStatus('✓ Relatório atualizado');
                 } else {
-                    // CREATE: Novo relatório
                     reportData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
                     const docRef = await db.collection('reports').add(reportData);
                     currentReportId = docRef.id;
@@ -1734,7 +1712,6 @@
         }
 
         async function carregarRelatorioFirebase(reportId) {
-            // CRÍTICO: Verificar autenticação
             if (!currentUser) {
                 alert('Faça login primeiro');
                 return;
@@ -1750,14 +1727,12 @@
 
                 const data = doc.data();
                 
-                // CRÍTICO: Verificação rigorosa de ownership - NUNCA carregar dados de outro usuário
                 if (data.userId !== currentUser.uid) {
                     console.error("🚫 Acesso negado ao relatório:", reportId);
                     alert('Acesso negado: Este relatório não pertence a você');
                     return;
                 }
 
-                // Carregar dados no formulário
                 populateForm(data);
                 currentReportId = reportId;
                 isNewReport = false;
@@ -1777,14 +1752,12 @@
                 return;
             }
 
-            // CRÍTICO: Verificar autenticação
             if (!currentUser) {
                 alert('Faça login primeiro');
                 return;
             }
 
             try {
-                // Verificar ownership antes de excluir
                 const doc = await db.collection('reports').doc(reportId).get();
                 
                 if (!doc.exists) {
@@ -1800,7 +1773,6 @@
 
                 await db.collection('reports').doc(reportId).delete();
                 
-                // Se estava editando este relatório, limpar formulário
                 if (currentReportId === reportId) {
                     limparFormularioSilencioso();
                     const hoje = new Date().toISOString().split('T')[0];
@@ -1837,7 +1809,6 @@
         }
 
         function populateForm(data) {
-            // CRÍTICO: Nunca popular userId vindo de dados externos
             formFields.forEach(field => {
                 const element = document.getElementById(field);
                 if (element && data[field] !== undefined) {
@@ -1899,7 +1870,6 @@
             'rp2Giroflex', 'rp2Produtividade', 'rp2Treinamento', 'rp2BoEletronico'
         ];
 
-        // Calcular KM percorrido
         document.getElementById('kmInicio').addEventListener('input', calcularKm);
         document.getElementById('kmFinal').addEventListener('input', calcularKm);
 
@@ -1972,19 +1942,6 @@
                 document.getElementById('dataRonda').value = hoje;
             }
         }
-
-        // ==========================================
-        // AUTO-SAVE REMOVIDO - ISOLAMENTO TOTAL
-        // ==========================================
-        
-        // CRÍTICO: Não há mais auto-save automático para garantir isolamento completo
-        // Cada usuário sempre começa com formulário limpo após login
-        
-        // Se desejar implementar auto-save no futuro, deve ser:
-        // 1. Criptografado com chave do usuário
-        // 2. Sempre verificar UID antes de restaurar
-        // 3. Nunca restaurar automaticamente - sempre perguntar ao usuário
-        
     </script>
 </body>
 </html>
